@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+python-dotenv
+openai
+langchain
+langchain-community
+chromadb
+sentence-transformers
+psycopg2-binary
+pgvector
+numpy
+tiktoken
+python-multipart
+pytest
+httpx

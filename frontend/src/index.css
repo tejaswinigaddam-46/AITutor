@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+:root {
+  --accent: #aa3bff;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900;
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-slate-100 rounded-full;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+}
+

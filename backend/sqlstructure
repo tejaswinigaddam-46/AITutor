@@ -1,0 +1,36 @@
+CREATE TYPE curriculum_book_enum AS ENUM (
+    'GOV_SSC_ENGLISH',
+    'GOV_SSC_PHYSICS',
+    'GOV_SSC_CHEMISTRY'
+);
+
+CREATE TABLE document_chunks (
+    id BIGSERIAL PRIMARY KEY,
+
+    -- Link to curriculum
+    curriculum_book_name curriculum_book_enum NOT NULL,
+
+    -- Source tracking
+    document_id INT NOT NULL,
+    book_name TEXT,
+    chapter TEXT,
+    page_number INT,
+
+    -- Chunk reconstruction
+    chunk_index INT NOT NULL,
+    total_chunks INT NOT NULL,
+
+    -- Actual chunk
+    content TEXT NOT NULL,
+
+    -- Embedding
+    embedding VECTOR(3072) NOT NULL,
+
+    -- Flexible metadata
+    chunk_metadata JSONB,
+
+    -- Deduplication
+    content_hash TEXT,
+
+    created_at TIMESTAMP DEFAULT NOW()
+);
