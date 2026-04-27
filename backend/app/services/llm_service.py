@@ -1,39 +1,52 @@
 import os
 import json
-from openai import OpenAI
+import logging
+from openai import AsyncOpenAI
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 class LLMService:
     def __init__(self):
-        # Initialize Groq client using OpenAI SDK compatibility
-        self.client = OpenAI(
-            api_key=settings.GROQ_API_KEY,
-            base_url="https://api.groq.com/openai/v1"
+        # Initialize OpenAI-compatible client for xAI
+        self.client = AsyncOpenAI(
+            api_key=settings.XAI_API_KEY,
+            base_url="https://api.x.ai/v1"
         )
         self.model = settings.LLM_MODEL
 
-    async def generate_response(self, system_prompt: str, user_prompt: str, temperature: float = 0.2):
+    async def generate_response(
+        self, 
+        system_prompt: str, 
+        user_prompt: str, 
+        temperature: float = 0.2, 
+        messages: list = None,
+        response_format: dict = None
+    ):
         """
         Generates a response from the LLM based on system and user prompts.
+        Supports structured output via response_format.
         """
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
+            if not messages:
+                messages = [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
-                ],
-                temperature=temperature
-            )
-            answer = response.choices[0].message.content
+                ]
             
-            # COMMENT: To extract LLM response to a file for debugging
-            # with open("debug_llm_response.txt", "w") as f:
-            #     f.write(answer)
-                
-            return answer
+            params = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature,
+            }
+            
+            if response_format:
+                params["response_format"] = response_format
+
+            response = await self.client.chat.completions.create(**params)
+            return response.choices[0].message.content
         except Exception as e:
-            print(f"Error generating response from LLM: {e}")
+            logger.error(f"Error generating response from LLM: {e}")
             return f"Error: {str(e)}"
 
 llm_service = LLMService()

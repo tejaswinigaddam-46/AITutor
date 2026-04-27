@@ -7,7 +7,7 @@ router = APIRouter()
 @router.post("/query", response_model=Answer)
 async def ask_question(query: Query):
     try:
-        result = await rag_service.answer_query(query.text)
+        result = await rag_service.answer_query(query.question)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -4,6 +4,7 @@ pydantic
 pydantic-settings
 python-dotenv
 openai
+xai-sdk
 langchain
 langchain-community
 chromadb

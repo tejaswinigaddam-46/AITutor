@@ -38,10 +38,11 @@ function App() {
         setBackendStatus({ connected: true, checking: false });
         
         const docs = await listDocuments();
-        setDocuments(docs);
+        setDocuments(Array.isArray(docs) ? docs : []);
       } catch (err) {
         console.error('Backend connection failed:', err);
         setBackendStatus({ connected: false, checking: false });
+        setDocuments([]);
       }
     };
     init();
@@ -67,7 +68,7 @@ function App() {
       setUploadStatus({ loading: false, success: 'Document processed and stored successfully!', error: null });
       // Refresh documents list
       const docs = await listDocuments();
-      setDocuments(docs);
+      setDocuments(Array.isArray(docs) ? docs : []);
     } catch (err) {
       setUploadStatus({ loading: false, success: null, error: err.response?.data?.detail || 'Failed to process document.' });
     }
@@ -131,8 +132,8 @@ function App() {
                 <option value="GOV_SSC_PHYSICS">GOV_SSC_PHYSICS</option>
                 <option value="GOV_SSC_CHEMISTRY">GOV_SSC_CHEMISTRY</option>
                 <option value="GOV_SSC_ENGLISH">GOV_SSC_ENGLISH</option>
-                {documents.map((doc, idx) => (
-                  !["GOV_SSC_PHYSICS", "GOV_SSC_CHEMISTRY", "GOV_SSC_ENGLISH"].includes(doc.curriculum_book_name) && (
+                {Array.isArray(documents) && documents.map((doc, idx) => (
+                  doc?.curriculum_book_name && !["GOV_SSC_PHYSICS", "GOV_SSC_CHEMISTRY", "GOV_SSC_ENGLISH"].includes(doc.curriculum_book_name) && (
                     <option key={idx} value={doc.curriculum_book_name}>{doc.curriculum_book_name}</option>
                   )
                 ))}

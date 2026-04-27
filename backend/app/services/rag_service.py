@@ -1,15 +1,20 @@
 import json
+import logging
+from pydantic import ValidationError
 from app.services.embedding_service import embedding_service
 from app.services.llm_service import llm_service
 from app.db.vector_store import vector_store
+from app.schemas.rag import AITutorResponse
+
+logger = logging.getLogger(__name__)
 
 class RAGService:
-    async def answer_query(self, query_text: str, limit: int = 5, book_name: str = None):
+    async def answer_query(self, question: str, limit: int = 5, book_name: str = None, retries: int = 3):
         """
-        Main function to retrieve chunks and get an answer from the LLM.
+        Main function to retrieve chunks and get an answer from the LLM using structured outputs.
         """
         # 1. Embed query
-        query_embeddings = await embedding_service.get_embeddings([query_text])
+        query_embeddings = await embedding_service.get_embeddings([question])
         if not query_embeddings:
             return {"answer": "Error generating query embedding", "sources": []}
         
@@ -18,10 +23,6 @@ class RAGService:
         # 2. Search vector store
         context_chunks = vector_store.similarity_search(query_vector, limit=limit, book_name=book_name)
         
-        # COMMENT: To extract retrieved chunks to a file for debugging
-        # with open("debug_retrieved_chunks.json", "w") as f:
-        #     json.dump(context_chunks, f, indent=2)
-
         if not context_chunks:
             return {
                 "answer": "I'm sorry, I couldn't find any relevant information in the database to answer your question.",
@@ -35,193 +36,168 @@ class RAGService:
         ])
 
         system_prompt = (
-            '''You are a helpful AI Tutor. Use the provided context from textbooks to answer the user's question. 
-            You are a safe and expert teacher AI designed for children (age 10–16).
-            Your job is to TEACH concepts clearly using textbook content, while ensuring all responses are SAFE, EDUCATIONAL, and AGE-APPROPRIATE.
+            '''You are a safe AI Tutor for students (age 10–16). Teach clearly using textbook context only.
 
-            -------------------------
-            INPUT CONTEXT:
-            - Textbook Content: will be provided in user prompt as Context.
-            - Student Question: will be provided in user prompt as Question.
-            -------------------------
+### INPUT
+* Textbook Content (Context)
+* Student Question
 
-            -------------------------
-            🚫 SAFETY GUARDRAILS (HIGHEST PRIORITY)
-            -------------------------
+---
 
-            You MUST REFUSE or REDIRECT if the user asks about:
+### 🚫 SAFETY (HIGHEST PRIORITY)
+Refuse if question is:
 
-            1. NON-EDUCATIONAL DISTRACTIONS
-            - Sports scores (cricket, football, etc.)
-            - Movies, celebrities, gossip
-            - Entertainment unrelated to learning
+* Non-educational (sports scores, movies, gossip)
+* Harmful/illegal (violence, hacking, drugs)
+* Inappropriate (sexual, abusive)
+* Out-of-scope (not from textbook)
 
-            2. HARMFUL / ILLEGAL CONTENT
-            - Violence, weapons, drugs
-            - Hacking, cheating, illegal activities
+**Response (strict):**
+"I'm here to help you learn your subject 😊 Let's focus on your lesson."
 
-            3. INAPPROPRIATE CONTENT
-            - Sexual content, pornography
-            - Abusive or offensive language
+---
 
-            4. OUT-OF-SCOPE QUESTIONS
-            - Anything not related to textbook learning
+### 📘 TEACHING METHOD
 
-            -------------------------
+#### 1. LAYERED TEACHING (MANDATORY)
+** Get the textbook points**
 
-            IF such a query appears:
-            - Politely refuse in a friendly tone
-            - Redirect back to learning
+* **TEXTBOOK_POINTS (VERY IMPORTANT)**
+list the points from textbook as is. later Explain in normal language (simple_explanation). and after explaining all points give brief examples reexplaining same concept by dry running through the example (example).
 
-            Example Response:
-            "I'm here to help you learn your subject 😊  
-            Let's focus on your lesson. What topic would you like help with?"
+Example Logic (Crucial):
+Show the "Before" and "After" clearly so the student can see the change.
 
-            DO NOT:
-            - Answer the unsafe question
-            - Give partial hints
-            - Encourage off-topic discussion
+---
 
-            -------------------------
+#### 2. SMART SECTIONS (remove only if not needed)
+* Memory Trick → patterns only
+* Why → to improves understanding (why_it_works)
+* Practice → 5 MCQs per subtopic
 
-            📘 TEACHING LOGIC
-            -------------------------
-            CORE TEACHING PRINCIPLE (VERY IMPORTANT)
+#### 3. TOPIC CHUNKING
+* Topic breakdown
+* Current subtopic (meaningful description)
 
-👉 Always follow “LAYERED TEACHING”
-
-1. 📘 Textbook Answer (MANDATORY)
-   - Exact, clean answer from textbook
-   - Bullet points if needed
-   - DO NOT modify or replace textbook points
-
-2. 💡 Extra Understanding (ONLY IF NEEDED)
-   - Add simple explanation, example, or intuition
-   - Keep it short 
-
-🧠 ADAPTIVE RESPONSE STRATEGY (CRITICAL)
-
-STEP 1: Identify question type
-
-A) SHORT / LIST / DIRECT QUESTION  
-→ Give ONLY textbook answer  
-→ Add minimal explanation if needed  
-→ DO NOT use full teaching format  
-
-B) CONCEPTUAL QUESTION  
-→ Use explanation + example  
-→ Add WHY (thinking) if helpful  
-
-C) LARGE TOPIC  
-→ Break into subtopics  
-→ Teach only 1–2 parts  
-→ Then stop  
-
--------------------------
-
-🧠 SMART SECTION USAGE (VERY IMPORTANT)
-
-Use sections ONLY when they add value:
-
-- Example → ONLY if concept is abstract  
-- Memory Trick → ONLY if pattern-based concept  
-- Why (Thinking Tip) → ONLY if improves understanding  
-- Practice → ONLY for conceptual topics  
-❌ DO NOT FORCE:
-- Memory tricks
-- Mistakes
-- Practice
-- Long explanations
-
-
-           📘 TOPIC CHUNKING (ONLY IF NEEDED)
-
-If topic is large:
-
-📘 Topic Breakdown:
-(List subtopics)
-
---- Teaching Now: (Subtopic 1) ---
-
-(Use adaptive format above)
-
-END WITH:
-"Do you want to continue to the next part?"
-
-            4. REAL-LIFE EXAMPLES
-            - Use relatable examples (money, cricket analogy allowed ONLY for explanation, not scores/news)
-
-            5. SUPPORTING KNOWLEDGE
-            - Add clarity using general knowledge
-            - Do NOT contradict textbook
-
-            7. THINKING TIP
-            - Explain WHY concept works
-
-            8. MINI PRACTICE (MANDATORY)
-            - 5 questions/mcq after each subtopic
-
-
-            10. INTERACTIVE FLOW
-            - Ask:
-            "Do you want to continue to the next part?"
-
-            -------------------------
-
-            📘 OUTPUT FORMAT(use only useful blocks, incase of using practice give atleast  (5 MCQs) Display it in a structured format ):
-
-            📘 Topic Breakdown:
-            (List subtopics)
-
-            --- Teaching Now: (Subtopic 1) ---
-
-            📘 Concept:
-            ...
-
-            🌍 Example:
-            ...
-
-            🧠 Memory Trick:
-            ...
-
-            💡 Why It Works:
-            ...
-
-            ✏️ Practice: Lets learn by practice
-            ...
-
-            --- Teaching Now: (Subtopic 2, if applicable) ---
-
-            (Repeat)
-
-            -------------------------
-
-            END WITH:
-            "Do you want to continue to the next part?"
-
-            -------------------------
-
-            IMPORTANT CONSTRAINTS:
-
-            - Never answer unsafe or irrelevant questions
-            - Stay within learning scope
-            - Do NOT teach everything at once.
-            - Focus on clarity over completeness.
-            - Keep responses short but meaningful.
-            - If topic is small → teach fully.
-
-            - If textbook is unclear:
-            say "This part is simplified for better understanding."
-
-            -------------------------''')
+### 🚫 SAFETY
+Refuse if question is non-educational or out-of-scope.
+Response: status="refused", message="I'm here to help you learn your subject 😊 Let's focus on your lesson."
+'''
+        )
         
-        user_prompt = f"Context:\n{context_text}\n\nQuestion: {query_text}\n\nAnswer:"
-
-        # 4. Generate answer via LLM
-        answer = await llm_service.generate_response(system_prompt, user_prompt)
+        user_prompt = f"Context:\n{context_text}\n\nQuestion: {question}\n\nAnswer:"
         
+        # Define the JSON schema for structured output
+        # Using AITutorResponse.model_json_schema() or manual schema as requested by user
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "tutor_response",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "status": {"type": "string"},
+                        "message": {"type": "string"},
+                        "topic_breakdown": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        },
+                        "current_subtopic": {"type": "string"},
+                        "textbook_points": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        },
+                        "simple_explanation": {"type": "string"},
+                        "example": {"type": "string"},
+                        "memory_trick": {"type": "string"},
+                        "why_it_works": {"type": "string"},
+                        "practice": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "question": {"type": "string"},
+                                    "options": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {"type": "string"},
+                                                "text": {"type": "string"}
+                                            },
+                                            "required": ["id", "text"],
+                                            "additionalProperties": False
+                                        }
+                                    },
+                                    "correct_answer": {"type": "string"},
+                                    "explanation": {"type": "string"}
+                                },
+                                "required": ["question", "options", "correct_answer", "explanation"],
+                                "additionalProperties": False
+                            }
+                        },
+                        "next_step": {"type": "string"}
+                    },
+                    "required": [
+                        "status", "message", "topic_breakdown", "current_subtopic",
+                        "textbook_points", "simple_explanation", "example",
+                        "memory_trick", "why_it_works", "practice", "next_step"
+                    ],
+                    "additionalProperties": False
+                }
+            }
+        }
+
+        # 4. Generate answer via LLM with structured output
+        last_error = ""
+        for attempt in range(retries):
+            attempt_num = attempt + 1
+            logger.info(f"Fetching structured response... Attempt {attempt_num}/{retries} for question: {question[:50]}...")
+            try:
+                answer_raw = await llm_service.generate_response(
+                    system_prompt, 
+                    user_prompt, 
+                    response_format=response_format
+                )
+                
+                # Parse JSON response
+                try:
+                    answer_data = json.loads(answer_raw)
+                except json.JSONDecodeError as e:
+                    last_error = f"JSON Decode Error: {str(e)}"
+                    logger.warning(f"Attempt {attempt_num} failed: {last_error}")
+                    continue
+
+                # Check for refusal
+                if answer_data.get("status") == "refused":
+                    logger.info(f"LLM refused to answer on attempt {attempt_num}")
+                    return {
+                        "answer": answer_data.get("message", "I'm here to help you learn your subject 😊 Let's focus on your lesson."),
+                        "sources": context_chunks
+                    }
+
+                # Validate with Pydantic
+                try:
+                    validated_answer = AITutorResponse(**answer_data)
+                    logger.info(f"Successfully fetched and validated API response on attempt {attempt_num}")
+                    return {
+                        "answer": validated_answer,
+                        "sources": context_chunks
+                    }
+                except ValidationError as ve:
+                    last_error = f"Validation Error: {str(ve)}"
+                    logger.warning(f"Attempt {attempt_num} failed: {last_error}")
+                    continue
+                    
+            except Exception as e:
+                last_error = f"Unexpected Error: {str(e)}"
+                logger.error(f"Attempt {attempt_num} failed: {last_error}")
+                if attempt == retries - 1:
+                    break
+
         return {
-            "answer": answer,
+            "answer": f"Error: Failed to generate a valid response after {retries} attempts. Last error: {last_error}",
             "sources": context_chunks
         }
 

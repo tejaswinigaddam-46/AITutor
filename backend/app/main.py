@@ -19,6 +19,10 @@ app.add_middleware(
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+# Compatibility alias for external repos calling /ai/query
+from app.api.v1.endpoints.rag import router as rag_router
+app.include_router(rag_router, prefix="/ai", tags=["compatibility"])
+
 @app.get("/")
 def root():
     return {"message": "Welcome to AI Tutor RAG API"}

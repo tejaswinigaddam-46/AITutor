@@ -11,7 +11,7 @@ const api = axios.create({
 });
 
 export const uploadDocument = async (formData) => {
-  const response = await api.post('/documents/upload', formData, {
+  const response = await api.post('documents/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -25,17 +25,17 @@ export const uploadDocument = async (formData) => {
 };
 
 export const queryRAG = async (queryText) => {
-  const response = await api.post('/rag/query', { text: queryText });
+  const response = await api.post('ai/query', { question: queryText });
   return response.data;
 };
 
 export const listDocuments = async () => {
-  const response = await api.get('/documents/');
+  const response = await api.get('documents/');
   return response.data;
 };
 
 export const checkHealth = async () => {
-  const response = await api.get('/health');
+  const response = await api.get('health');
   return response.data;
 };
 

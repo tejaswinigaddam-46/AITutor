@@ -26,7 +26,8 @@ class Settings(BaseSettings):
 
     # API Keys - Required for production
     EMBEDDING_API_KEY: str 
-    GROQ_API_KEY: str
+    GROQ_API_KEY: str = "" # Default empty if not provided
+    XAI_API_KEY: str = "" # Added for Grok integration
     
     # Models
     EMBEDDING_MODEL: str = ""
