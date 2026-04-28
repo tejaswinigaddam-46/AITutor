@@ -71,7 +71,7 @@ Show the "Before" and "After" clearly so the student can see the change.
 ---
 
 #### 2. SMART SECTIONS (remove only if not needed)
-* Memory Trick → patterns only
+* Memory Trick → Dont create new use only existing worldwide patterns or examples 
 * Why → to improves understanding (why_it_works)
 * Practice → 5 MCQs per subtopic
 
