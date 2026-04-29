@@ -65,6 +65,7 @@ CREATE TABLE messages (
     conversation_id UUID NOT null REFERENCES conversations(id) ON DELETE CASCADE,
     role message_role NOT NULL,
     content TEXT NOT NULL,
+    summary TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -14,6 +14,7 @@ class ConversationStore:
         role: str,
         content: str,
         curriculum_book_name: str,
+        summary: Optional[str] = None,
         title: Optional[str] = None
     ) -> Tuple[dict, bool]:
         """
@@ -75,11 +76,11 @@ class ConversationStore:
 
                 cur.execute(
                     """
-                    INSERT INTO messages (conversation_id, role, content)
-                    VALUES (%s, %s, %s)
-                    RETURNING id, conversation_id, role, content, created_at
+                    INSERT INTO messages (conversation_id, role, content, summary)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id, conversation_id, role, content, summary, created_at
                     """,
-                    (str(conversation_id), role, content)
+                    (str(conversation_id), role, content, summary)
                 )
                 message = cur.fetchone()
 
@@ -124,7 +125,7 @@ class ConversationStore:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     """
-                    SELECT m.id, m.conversation_id, m.role, m.content, m.created_at
+                    SELECT m.id, m.conversation_id, m.role, m.content, m.summary, m.created_at
                     FROM messages m
                     JOIN conversations c ON m.conversation_id = c.id
                     WHERE m.conversation_id = %s AND c.username = %s

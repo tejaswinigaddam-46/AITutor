@@ -1,32 +1,66 @@
 import json
 import logging
+from typing import Optional
+from uuid import UUID
 from pydantic import ValidationError
 from app.services.embedding_service import embedding_service
 from app.services.llm_service import llm_service
 from app.db.vector_store import vector_store
+from app.db.conversation_store import conversation_store
+from app.services.conversation_service import conversation_service
 from app.schemas.rag import AITutorResponse
 
 logger = logging.getLogger(__name__)
 
 class RAGService:
-    async def answer_query(self, question: str, limit: int = 5, book_name: str = None, retries: int = 2):
+    async def answer_query(
+        self, 
+        question: str, 
+        limit: int = 5, 
+        book_name: str = None, 
+        retries: int = 2,
+        conversation_id: Optional[UUID] = None,
+        username: Optional[str] = None
+    ):
         """
         Main function to retrieve chunks and get an answer from the LLM using structured outputs.
         """
+        # 0. Get previous summary from conversation history
+        prev_summary = None
+        convo_book_name = book_name
+        
+        if conversation_id and username:
+            convo = conversation_store.get_conversation(conversation_id, username)
+            if convo:
+                convo_book_name = convo.get('curriculum_book_name')
+                
+            messages = conversation_store.get_messages(conversation_id, username)
+            if messages:
+                # Get the summary from the most recent message that has one
+                for m in reversed(messages):
+                    if m.get('summary'):
+                        prev_summary = m['summary']
+                        break
+
         # 1. Embed query
         query_embeddings = await embedding_service.get_embeddings([question])
         if not query_embeddings:
-            return {"answer": "Error generating query embedding", "sources": []}
+            return {
+                "answer": "Error generating query embedding", 
+                "sources": [],
+                "summary": "Error: Embedding failed"
+            }
         
         query_vector = query_embeddings[0]
         
         # 2. Search vector store
-        context_chunks = vector_store.similarity_search(query_vector, limit=limit, book_name=book_name)
+        context_chunks = vector_store.similarity_search(query_vector, limit=limit, book_name=convo_book_name)
         
         if not context_chunks:
             return {
                 "answer": "I'm sorry, I couldn't find any relevant information in the database to answer your question.",
-                "sources": []
+                "sources": [],
+                "summary": "No context found"
             }
 
         # 3. Augment prompt with context
@@ -81,11 +115,19 @@ Show the "Before" and "After" clearly so the student can see the change.
 
 ### 🚫 SAFETY
 Refuse if question is non-educational or out-of-scope.
-Response: status="refused", message="I'm here to help you learn your subject 😊 Let's focus on your lesson."
+Response: status="refused", message="I'm here to help you learn your subject 😊 Let's focus on your lesson.", summary="Refused due to safety/scope"
+
+### SUMMARY (MANDATORY)
+Include a detailed summary of the current exact topic (max 1000 words) in the "summary" field.
 '''
         )
         
-        user_prompt = f"Context:\n{context_text}\n\nQuestion: {question}\n\nAnswer:"
+        # Prepare user prompt with summaries
+        user_prompt = f"Context:\n{context_text}\n\n"
+        if prev_summary:
+            user_prompt += f"prev summary: {prev_summary}\n"
+        
+        user_prompt += f"\nQuestion: {question}\n\nAnswer:"
         
         # Define the JSON schema for structured output
         # Using AITutorResponse.model_json_schema() or manual schema as requested by user
@@ -137,12 +179,14 @@ Response: status="refused", message="I'm here to help you learn your subject �
                                 "additionalProperties": False
                             }
                         },
-                        "next_step": {"type": "string"}
+                        "next_step": {"type": "string"},
+                        "summary": {"type": "string"}
                     },
                     "required": [
                         "status", "message", "topic_breakdown", "current_subtopic",
                         "textbook_points", "simple_explanation", "example",
-                        "memory_trick", "why_it_works", "practice", "next_step"
+                        "memory_trick", "why_it_works", "practice", "next_step",
+                        "summary"
                     ],
                     "additionalProperties": False
                 }
@@ -174,16 +218,44 @@ Response: status="refused", message="I'm here to help you learn your subject �
                     logger.info(f"LLM refused to answer on attempt {attempt_num}")
                     return {
                         "answer": answer_data.get("message", "I'm here to help you learn your subject 😊 Let's focus on your lesson."),
-                        "sources": context_chunks
+                        "sources": context_chunks,
+                        "summary": answer_data.get("summary", "Refused")
                     }
 
                 # Validate with Pydantic
                 try:
                     validated_answer = AITutorResponse(**answer_data)
                     logger.info(f"Successfully fetched and validated API response on attempt {attempt_num}")
+                    
+                    # 5. Save interaction to database if in a conversation
+                    if conversation_id and username:
+                        try:
+                            # Save user message (without summary for now, or we could use the turn summary)
+                            await conversation_service.create_message(
+                                username=username,
+                                conversation_id=conversation_id,
+                                role="user",
+                                content=question,
+                                curriculum_book_name=convo_book_name or "GOV_SSC_PHYSICS", 
+                                summary=None 
+                            )
+                            
+                            # Save assistant message with summary
+                            await conversation_service.create_message(
+                                username=username,
+                                conversation_id=conversation_id,
+                                role="assistant",
+                                content=json.dumps(answer_data), 
+                                curriculum_book_name=convo_book_name or "GOV_SSC_PHYSICS",
+                                summary=validated_answer.summary
+                            )
+                        except Exception as save_err:
+                            logger.error(f"Error saving interaction to DB: {save_err}")
+
                     result = {
                         "answer": validated_answer,
-                        "sources": context_chunks
+                        "sources": context_chunks,
+                        "summary": validated_answer.summary
                     }
                     print(f"DEBUG: Final RAG Result: {result}")
                     return result

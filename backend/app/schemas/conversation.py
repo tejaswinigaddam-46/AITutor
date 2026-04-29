@@ -16,6 +16,7 @@ class MessageRole(str, Enum):
 class MessageBase(BaseModel):
     role: MessageRole
     content: str
+    summary: Optional[str] = None
 
 class MessageCreate(MessageBase):
     conversation_id: Optional[UUID] = None

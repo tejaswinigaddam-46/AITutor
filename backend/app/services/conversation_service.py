@@ -1,16 +1,18 @@
 from typing import List, Optional, Tuple
 from uuid import UUID, uuid4
 from app.db.conversation_store import conversation_store
+from app.services.llm_service import llm_service
 
 
 class ConversationService:
-    def create_message(
+    async def create_message(
         self,
         username: str,
         conversation_id: Optional[UUID],
         role: str,
         content: str,
         curriculum_book_name: str,
+        summary: Optional[str] = None,
         title: Optional[str] = None
     ) -> Tuple[dict, bool]:
         """
@@ -36,6 +38,7 @@ class ConversationService:
             role=role,
             content=content,
             curriculum_book_name=curriculum_book_name,
+            summary=summary,
             title=title
         )
 

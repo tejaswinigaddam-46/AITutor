@@ -17,12 +17,13 @@ async def create_message(
     username: str = Depends(get_current_username)
 ):
     try:
-        message, is_new = conversation_service.create_message(
+        message, is_new = await conversation_service.create_message(
             username=username,
             conversation_id=message_data.conversation_id,
             role=message_data.role,
             content=message_data.content,
             curriculum_book_name=message_data.curriculum_book_name,
+            summary=message_data.summary,
             title=message_data.title
         )
         print(f"DEBUG: Created message: {message}")

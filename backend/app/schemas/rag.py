@@ -1,8 +1,10 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from uuid import UUID
 
 class Query(BaseModel):
     question: str
+    conversation_id: Optional[UUID] = None
 
 class Option(BaseModel):
     id: str
@@ -26,6 +28,7 @@ class AITutorResponse(BaseModel):
     why_it_works: str
     practice: List[PracticeQuestion]
     next_step: str
+    summary: str = Field(..., description="Concise summary of the current interaction (max 20 words)")
 
 class Source(BaseModel):
     id: int
@@ -40,3 +43,4 @@ class Source(BaseModel):
 class Answer(BaseModel):
     answer: AITutorResponse | str
     sources: List[Source]
+    summary: Optional[str] = None
