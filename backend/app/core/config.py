@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     # No default value for API_KEY to force it to be set in environment/dotenv
     API_KEY: str 
 
+    # JWT Configuration
+    JWT_SECRET: str = ""
+    JWT_ISSUER: str = "sms-backend"
+    JWT_AUDIENCE: str = "sms-client"
+    JWT_ALGORITHM: str = "HS256"
+
     # CORS
     BACKEND_CORS_ORIGINS: Any = []
 

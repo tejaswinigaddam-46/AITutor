@@ -14,5 +14,6 @@ pgvector
 numpy
 tiktoken
 python-multipart
+PyJWT
 pytest
 httpx

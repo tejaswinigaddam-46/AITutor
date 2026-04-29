@@ -9,7 +9,7 @@ from app.schemas.rag import AITutorResponse
 logger = logging.getLogger(__name__)
 
 class RAGService:
-    async def answer_query(self, question: str, limit: int = 5, book_name: str = None, retries: int = 3):
+    async def answer_query(self, question: str, limit: int = 5, book_name: str = None, retries: int = 2):
         """
         Main function to retrieve chunks and get an answer from the LLM using structured outputs.
         """
@@ -73,7 +73,7 @@ Show the "Before" and "After" clearly so the student can see the change.
 #### 2. SMART SECTIONS (remove only if not needed)
 * Memory Trick → Dont create new use only existing worldwide patterns or examples 
 * Why → to improves understanding (why_it_works)
-* Practice → 5 MCQs per subtopic
+* Practice → 3 MCQs per subtopic
 
 #### 3. TOPIC CHUNKING
 * Topic breakdown
@@ -181,10 +181,12 @@ Response: status="refused", message="I'm here to help you learn your subject �
                 try:
                     validated_answer = AITutorResponse(**answer_data)
                     logger.info(f"Successfully fetched and validated API response on attempt {attempt_num}")
-                    return {
+                    result = {
                         "answer": validated_answer,
                         "sources": context_chunks
                     }
+                    print(f"DEBUG: Final RAG Result: {result}")
+                    return result
                 except ValidationError as ve:
                     last_error = f"Validation Error: {str(ve)}"
                     logger.warning(f"Attempt {attempt_num} failed: {last_error}")

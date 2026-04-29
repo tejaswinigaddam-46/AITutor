@@ -3,6 +3,7 @@ import json
 import logging
 from openai import AsyncOpenAI
 from app.core.config import settings
+from app.db.conversation_store import conversation_store
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +44,12 @@ class LLMService:
             if response_format:
                 params["response_format"] = response_format
 
+            #print(f"\n--- DEBUG: LLM INPUT PROMPT ---\n{json.dumps(messages, indent=2)}\n-------------------------------\n")
             response = await self.client.chat.completions.create(**params)
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            conversation_store.update_api_count()
+            #print(f"\n--- DEBUG: LLM OUTPUT RESPONSE ---\n{content}\n----------------------------------\n")
+            return content
         except Exception as e:
             logger.error(f"Error generating response from LLM: {e}")
             return f"Error: {str(e)}"

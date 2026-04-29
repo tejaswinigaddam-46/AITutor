@@ -40,7 +40,7 @@ class VectorStore:
                 conn.commit()
                 return new_id
 
-    def similarity_search(self, query_embedding, limit=5, book_name=None):
+    def similarity_search(self, query_embedding, limit, book_name=None):
         """
         Performs a vector similarity search (cosine distance).
         """
@@ -48,8 +48,7 @@ class VectorStore:
             query_embedding = np.array(query_embedding)
             
         query = """
-        SELECT id, curriculum_book_name, document_id, book_name, chapter, page_number, 
-               chunk_index, total_chunks, content, chunk_metadata, 
+        SELECT id, curriculum_book_name, content, book_name, chapter, page_number,
                (embedding <=> %s) AS distance
         FROM document_chunks
         """
@@ -67,12 +66,12 @@ class VectorStore:
                 cursor.execute(query, tuple(params))
                 return cursor.fetchall()
 
-    def get_chunk(self, chunk_id: int):
-        """Retrieves a document chunk by its ID."""
-        query = "SELECT * FROM document_chunks WHERE id = %s;"
-        with db_session.get_connection() as conn:
-            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                cursor.execute(query, (chunk_id,))
-                return cursor.fetchone()
+    # def get_chunk(self, chunk_id: int):
+    #     """Retrieves a document chunk by its ID."""
+    #     query = "SELECT * FROM document_chunks WHERE id = %s;"
+    #     with db_session.get_connection() as conn:
+    #         with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+    #             cursor.execute(query, (chunk_id,))
+    #             return cursor.fetchone()
 
 vector_store = VectorStore()

@@ -34,3 +34,42 @@ CREATE TABLE document_chunks (
 
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE conversations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username  VARCHAR(100) Not null;
+    curriculum_book_name curriculum_book_enum NOT NULL,
+    title TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+Auto-update updated_at (for UX touch)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = CURRENT_TIMESTAMP;
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_conversations_updated_at
+BEFORE UPDATE ON conversations
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TYPE message_role AS ENUM ('user', 'assistant');
+
+CREATE TABLE messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT null REFERENCES conversations(id) ON DELETE CASCADE,
+    role message_role NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE countapihit (
+    count INT DEFAULT 0
+);
+INSERT INTO countapihit (count) VALUES (0);
+
