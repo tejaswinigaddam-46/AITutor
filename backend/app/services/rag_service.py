@@ -1,13 +1,12 @@
 import json
 import logging
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from pydantic import ValidationError
 from app.services.embedding_service import embedding_service
 from app.services.llm_service import llm_service
 from app.db.vector_store import vector_store
 from app.db.conversation_store import conversation_store
-from app.services.conversation_service import conversation_service
 from app.schemas.rag import AITutorResponse
 
 logger = logging.getLogger(__name__)
@@ -25,9 +24,10 @@ class RAGService:
         """
         Main function to retrieve chunks and get an answer from the LLM using structured outputs.
         """
-        # 0. Get previous summary from conversation history
+        # 0. Get previous summary and conversation history
         prev_summary = None
         convo_book_name = book_name
+        conversation_history: List[dict] = []
         
         if conversation_id and username:
             convo = conversation_store.get_conversation(conversation_id, username)
@@ -36,14 +36,19 @@ class RAGService:
                 
             messages = conversation_store.get_messages(conversation_id, username)
             if messages:
+                conversation_history = messages
                 # Get the summary from the most recent message that has one
                 for m in reversed(messages):
                     if m.get('summary'):
                         prev_summary = m['summary']
                         break
 
-        # 1. Embed query
-        query_embeddings = await embedding_service.get_embeddings([question])
+        # 1. Prepare query for embedding: use summary + question if we have a summary
+        embedding_query = question
+        if prev_summary:
+            embedding_query = f"{prev_summary}\n\n{question}"
+            
+        query_embeddings = await embedding_service.get_embeddings([embedding_query])
         if not query_embeddings:
             return {
                 "answer": "Error generating query embedding", 
@@ -74,6 +79,7 @@ class RAGService:
 
 ### INPUT
 * Textbook Content (Context)
+* Previous Conversation Summary (prev_summary - if available)
 * Student Question
 
 ---
@@ -118,16 +124,26 @@ Refuse if question is non-educational or out-of-scope.
 Response: status="refused", message="I'm here to help you learn your subject 😊 Let's focus on your lesson.", summary="Refused due to safety/scope"
 
 ### SUMMARY (MANDATORY)
-Include a detailed summary of the current exact topic (max 1000 words) in the "summary" field.
+SUMMARY RULE (STRICT):
+Summarize ONLY the concept asked in the student question.
+Do NOT summarize entire textbook or chapter.
+Do NOT include learning outcomes, pedagogy, or unrelated sections.
+
+### PREVIOUS CONVERSATION (IMPORTANT)
+If prev_summary is provided, use it to understand what was discussed earlier.
+If the student asks "what is the above topic", "reexplain it", "what did we just talk about", or similar follow-up questions:
+1. First refer to the prev_summary to understand the topic
+2. Use the textbook context to re-explain or answer the question
+3. DO NOT treat the question as a new search for textbook chunks - it's about the previous conversation
 '''
         )
         
         # Prepare user prompt with summaries
         user_prompt = f"Context:\n{context_text}\n\n"
         if prev_summary:
-            user_prompt += f"prev summary: {prev_summary}\n"
+            user_prompt += f"Previous Conversation Summary (prev_summary):\n{prev_summary}\n\n"
         
-        user_prompt += f"\nQuestion: {question}\n\nAnswer:"
+        user_prompt += f"Question: {question}\n\nAnswer:"
         
         # Define the JSON schema for structured output
         # Using AITutorResponse.model_json_schema() or manual schema as requested by user
@@ -216,10 +232,13 @@ Include a detailed summary of the current exact topic (max 1000 words) in the "s
                 # Check for refusal
                 if answer_data.get("status") == "refused":
                     logger.info(f"LLM refused to answer on attempt {attempt_num}")
+                    refusal_msg = answer_data.get("message", "I'm here to help you learn your subject 😊 Let's focus on your lesson.")
+                    refusal_summary = answer_data.get("summary", "Refused due to safety/scope")
+                    
                     return {
-                        "answer": answer_data.get("message", "I'm here to help you learn your subject 😊 Let's focus on your lesson."),
+                        "answer": refusal_msg,
                         "sources": context_chunks,
-                        "summary": answer_data.get("summary", "Refused")
+                        "summary": refusal_summary
                     }
 
                 # Validate with Pydantic
@@ -227,30 +246,7 @@ Include a detailed summary of the current exact topic (max 1000 words) in the "s
                     validated_answer = AITutorResponse(**answer_data)
                     logger.info(f"Successfully fetched and validated API response on attempt {attempt_num}")
                     
-                    # 5. Save interaction to database if in a conversation
-                    if conversation_id and username:
-                        try:
-                            # Save user message (without summary for now, or we could use the turn summary)
-                            await conversation_service.create_message(
-                                username=username,
-                                conversation_id=conversation_id,
-                                role="user",
-                                content=question,
-                                curriculum_book_name=convo_book_name or "GOV_SSC_PHYSICS", 
-                                summary=None 
-                            )
-                            
-                            # Save assistant message with summary
-                            await conversation_service.create_message(
-                                username=username,
-                                conversation_id=conversation_id,
-                                role="assistant",
-                                content=json.dumps(answer_data), 
-                                curriculum_book_name=convo_book_name or "GOV_SSC_PHYSICS",
-                                summary=validated_answer.summary
-                            )
-                        except Exception as save_err:
-                            logger.error(f"Error saving interaction to DB: {save_err}")
+
 
                     result = {
                         "answer": validated_answer,

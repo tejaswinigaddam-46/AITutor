@@ -42,6 +42,10 @@ class ConversationService:
             title=title
         )
 
+    def update_message_summary(self, message_id: UUID, username: str, summary: str) -> bool:
+        """Update the summary of a specific message."""
+        return conversation_store.update_message_summary(message_id, username, summary)
+
     def get_conversations(self, username: str, limit: int = 50) -> List[dict]:
         """Get all conversations for a user."""
         return conversation_store.get_conversations(username, limit)

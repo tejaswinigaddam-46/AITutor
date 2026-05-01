@@ -85,6 +85,7 @@ class ConversationStore:
                 message = cur.fetchone()
 
                 conn.commit()
+                print(f"DEBUG: {role} message saved to db with summary: {summary}")
                 return dict(message), is_new_conversation
 
     def get_conversations(self, username: str, limit: int = 50) -> List[dict]:
@@ -174,6 +175,29 @@ class ConversationStore:
                 deleted = cur.rowcount > 0
                 conn.commit()
                 return deleted
+
+    def update_message_summary(self, message_id: UUID, username: str, summary: str) -> bool:
+        """
+        Update the summary of a specific message, verifying user owns the conversation.
+        Returns True if updated, False if not found or not authorized.
+        """
+        with db_session.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE messages m
+                    SET summary = %s
+                    FROM conversations c
+                    WHERE m.id = %s
+                    AND m.conversation_id = c.id
+                    AND c.username = %s
+                    """,
+                    (summary, str(message_id), username)
+                )
+                updated = cur.rowcount > 0
+                conn.commit()
+                return updated
+
     def update_api_count(self):
         try:
             with db_session.get_connection() as conn:

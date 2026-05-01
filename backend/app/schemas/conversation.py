@@ -16,16 +16,17 @@ class MessageRole(str, Enum):
 class MessageBase(BaseModel):
     role: MessageRole
     content: str
-    summary: Optional[str] = None
 
 class MessageCreate(MessageBase):
     conversation_id: Optional[UUID] = None
     curriculum_book_name: CurriculumBookEnum
     title: Optional[str] = None
+    summary: Optional[str] = None
 
 class MessageRead(MessageBase):
     id: UUID
     conversation_id: UUID
+    summary: Optional[str] = None
     created_at: datetime
 
     class Config:
