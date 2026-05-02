@@ -74,3 +74,27 @@ CREATE TABLE countapihit (
 );
 INSERT INTO countapihit (count) VALUES (0);
 
+
+
+CREATE TABLE question_subtopics (
+    question_subtopics_id SERIAL PRIMARY KEY,
+    question_id INT REFERENCES question_assignments(question_id) ON DELETE CASCADE,
+    subtopic_name TEXT NOT NULL,
+    UNIQUE (question_id, subtopic_name)
+);
+
+CREATE TABLE question_assignments (
+    question_id SERIAL PRIMARY KEY,
+    question_name TEXT NOT NULL,  /* repeated questions in DB yes for inidvidaul student no but for all studnet questions can be repeated*/
+    curriculum_book_name curriculum_book_enum NOT NULL,
+    student_username VARCHAR(100) NOT NULL,
+    assigned_by_username VARCHAR(100) NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE question_progress (
+    question_subtopics_id BIGINT PRIMARY KEY REFERENCES question_subtopics(question_subtopics_id) ON DELETE CASCADE,
+    student_username VARCHAR(100) NOT NULL,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('yet_to_start', 'in_progress', 'completed')),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
