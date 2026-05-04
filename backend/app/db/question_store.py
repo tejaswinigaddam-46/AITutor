@@ -39,7 +39,6 @@ class QuestionStore:
                     SELECT question_id, question_name, curriculum_book_name, 
                            student_username, assigned_by_username, assigned_at, exam_id
                     FROM question_assignments
-                    WHERE 1=1
                 """
                 params = []
                 
@@ -71,6 +70,36 @@ class QuestionStore:
                 )
                 question = cur.fetchone()
                 return dict(question) if question else None
+
+    def get_question_assignments_by_exam_id(
+        self,
+        exam_id: str,
+        student_username: Optional[str] = None,
+        assigned_by_username: Optional[str] = None
+    ) -> List[dict]:
+        with db_session.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                query = """
+                    SELECT question_id, question_name, curriculum_book_name, 
+                           student_username, assigned_by_username, assigned_at, exam_id
+                    FROM question_assignments
+                    WHERE exam_id = %s
+                """
+                params = [exam_id]
+                
+                if student_username:
+                    query += " AND student_username = %s"
+                    params.append(student_username)
+                    
+                if assigned_by_username:
+                    query += " AND assigned_by_username = %s"
+                    params.append(assigned_by_username)
+                    
+                query += " ORDER BY assigned_at DESC"
+                
+                cur.execute(query, tuple(params))
+                questions = cur.fetchall()
+                return [dict(q) for q in questions]
 
     def update_question_assignment(
         self,

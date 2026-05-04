@@ -1,6 +1,7 @@
 import logging
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List, Optional
+from uuid import UUID
 from app.schemas.question import (
     QuestionAssignmentCreate,
     QuestionAssignmentRead,
@@ -57,6 +58,24 @@ async def list_question_assignments(
         logger.error(f"Error listing question assignments: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/assignments/exam/{exam_id}", response_model=List[QuestionAssignmentRead])
+async def list_question_assignments_by_exam(
+    exam_id: UUID,
+    student_username: str = Query(...),  # 👈 comes from ?student_username=
+    username: str = Depends(get_current_username)
+):
+    try:
+        assignments = question_service.get_question_assignments_by_exam_id(
+            str(exam_id),
+            student_username=student_username,
+            assigned_by_username=username
+        )
+        logger.info(f"List question assignments for exam {exam_id}: {assignments}")
+        return assignments
+    except Exception as e:
+        logger.error(f"Error listing question assignments for exam: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/assignments/{question_id}", response_model=QuestionAssignmentWithSubtopics)
 async def get_question_assignment(
