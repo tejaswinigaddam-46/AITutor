@@ -37,14 +37,14 @@ CREATE TABLE document_chunks (
 
 CREATE TABLE conversations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username  VARCHAR(100) Not null;
+    username  VARCHAR(100) NOT NULL,
     curriculum_book_name curriculum_book_enum NOT NULL,
     title TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-Auto-update updated_at (for UX touch)
+-- Auto-update updated_at (for UX touch)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -89,8 +89,10 @@ CREATE TABLE question_assignments (
     curriculum_book_name curriculum_book_enum NOT NULL,
     student_username VARCHAR(100) NOT NULL,
     assigned_by_username VARCHAR(100) NOT NULL,
-    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    exam_id UUID NOT NULL
 );
+
 
 CREATE TABLE question_progress (
     question_subtopics_id BIGINT PRIMARY KEY REFERENCES question_subtopics(question_subtopics_id) ON DELETE CASCADE,

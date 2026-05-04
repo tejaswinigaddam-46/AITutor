@@ -28,7 +28,8 @@ async def create_question_assignment(
             question_name=assignment_data.question_name,
             curriculum_book_name=assignment_data.curriculum_book_name,
             student_username=assignment_data.student_username,
-            assigned_by_username=username
+            assigned_by_username=username,
+            exam_id=str(assignment_data.exam_id)
         )
         logger.info(f"Created question assignment: {assignment}")
         return assignment

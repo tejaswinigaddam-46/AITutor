@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import List, Optional
 from enum import Enum
+from uuid import UUID
 from app.schemas.conversation import CurriculumBookEnum
 
 
@@ -15,6 +16,7 @@ class QuestionAssignmentBase(BaseModel):
     question_name: str
     curriculum_book_name: CurriculumBookEnum
     student_username: str
+    exam_id: UUID
 
 
 class QuestionAssignmentCreate(QuestionAssignmentBase):

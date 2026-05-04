@@ -8,7 +8,8 @@ class QuestionService:
         question_name: str,
         curriculum_book_name: str,
         student_username: str,
-        assigned_by_username: str
+        assigned_by_username: str,
+        exam_id: str
     ) -> dict:
         if not question_name or not question_name.strip():
             raise ValueError("Question name cannot be empty")
@@ -19,7 +20,8 @@ class QuestionService:
             question_name=question_name,
             curriculum_book_name=curriculum_book_name,
             student_username=student_username,
-            assigned_by_username=assigned_by_username
+            assigned_by_username=assigned_by_username,
+            exam_id=exam_id
         )
 
     def get_question_assignments(
@@ -40,7 +42,8 @@ class QuestionService:
         question_id: int,
         question_name: Optional[str] = None,
         curriculum_book_name: Optional[str] = None,
-        student_username: Optional[str] = None
+        student_username: Optional[str] = None,
+        exam_id: Optional[str] = None
     ) -> Optional[dict]:
         if question_name and not question_name.strip():
             raise ValueError("Question name cannot be empty")
@@ -51,7 +54,8 @@ class QuestionService:
             question_id=question_id,
             question_name=question_name,
             curriculum_book_name=curriculum_book_name,
-            student_username=student_username
+            student_username=student_username,
+            exam_id=exam_id
         )
 
     def delete_question_assignment(self, question_id: int) -> bool:

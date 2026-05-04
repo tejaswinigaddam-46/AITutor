@@ -9,19 +9,20 @@ class QuestionStore:
         question_name: str,
         curriculum_book_name: str,
         student_username: str,
-        assigned_by_username: str
+        assigned_by_username: str,
+        exam_id: str
     ) -> dict:
         with db_session.get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     """
                     INSERT INTO question_assignments 
-                    (question_name, curriculum_book_name, student_username, assigned_by_username)
-                    VALUES (%s, %s, %s, %s)
+                    (question_name, curriculum_book_name, student_username, assigned_by_username, exam_id)
+                    VALUES (%s, %s, %s, %s, %s)
                     RETURNING question_id, question_name, curriculum_book_name, 
-                              student_username, assigned_by_username, assigned_at
+                              student_username, assigned_by_username, assigned_at, exam_id
                     """,
-                    (question_name, curriculum_book_name, student_username, assigned_by_username)
+                    (question_name, curriculum_book_name, student_username, assigned_by_username, exam_id)
                 )
                 question = cur.fetchone()
                 conn.commit()
@@ -36,7 +37,7 @@ class QuestionStore:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 query = """
                     SELECT question_id, question_name, curriculum_book_name, 
-                           student_username, assigned_by_username, assigned_at
+                           student_username, assigned_by_username, assigned_at, exam_id
                     FROM question_assignments
                     WHERE 1=1
                 """
@@ -62,7 +63,7 @@ class QuestionStore:
                 cur.execute(
                     """
                     SELECT question_id, question_name, curriculum_book_name, 
-                           student_username, assigned_by_username, assigned_at
+                           student_username, assigned_by_username, assigned_at, exam_id
                     FROM question_assignments
                     WHERE question_id = %s
                     """,
@@ -76,7 +77,8 @@ class QuestionStore:
         question_id: int,
         question_name: Optional[str] = None,
         curriculum_book_name: Optional[str] = None,
-        student_username: Optional[str] = None
+        student_username: Optional[str] = None,
+        exam_id: Optional[str] = None
     ) -> Optional[dict]:
         with db_session.get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -95,6 +97,10 @@ class QuestionStore:
                     updates.append("student_username = %s")
                     params.append(student_username)
                 
+                if exam_id:
+                    updates.append("exam_id = %s")
+                    params.append(exam_id)
+                
                 if not updates:
                     return self.get_question_assignment(question_id)
                 
@@ -105,7 +111,7 @@ class QuestionStore:
                     SET {', '.join(updates)}
                     WHERE question_id = %s
                     RETURNING question_id, question_name, curriculum_book_name, 
-                              student_username, assigned_by_username, assigned_at
+                              student_username, assigned_by_username, assigned_at, exam_id
                 """
                 
                 cur.execute(query, tuple(params))
