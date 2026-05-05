@@ -39,6 +39,7 @@ class QuestionStore:
                     SELECT question_id, question_name, curriculum_book_name, 
                            student_username, assigned_by_username, assigned_at, exam_id
                     FROM question_assignments
+                    WHERE 1=1
                 """
                 params = []
                 
@@ -189,6 +190,68 @@ class QuestionStore:
                 
                 conn.commit()
                 return dict(subtopic)
+
+    def create_question_subtopics_and_progress(
+        self,
+        question_id: int,
+        subtopic_names: List[str],
+        default_status: str = "in_progress",
+    ) -> List[dict]:
+        question_assignment = self.get_question_assignment(question_id)
+        if not question_assignment:
+            raise ValueError(f"Question assignment with id {question_id} not found")
+
+        valid_statuses = ["yet_to_start", "in_progress", "completed"]
+        if default_status not in valid_statuses:
+            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+
+        student_username = question_assignment["student_username"]
+        created_or_existing: List[dict] = []
+
+        with db_session.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                for raw_name in subtopic_names:
+                    subtopic_name = (raw_name or "").strip()
+                    if not subtopic_name:
+                        continue
+
+                    cur.execute(
+                        """
+                        INSERT INTO question_subtopics (question_id, subtopic_name)
+                        VALUES (%s, %s)
+                        ON CONFLICT (question_id, subtopic_name) DO NOTHING
+                        RETURNING question_subtopics_id, question_id, subtopic_name
+                        """,
+                        (question_id, subtopic_name),
+                    )
+                    subtopic = cur.fetchone()
+                    if not subtopic:
+                        cur.execute(
+                            """
+                            SELECT question_subtopics_id, question_id, subtopic_name
+                            FROM question_subtopics
+                            WHERE question_id = %s AND subtopic_name = %s
+                            """,
+                            (question_id, subtopic_name),
+                        )
+                        subtopic = cur.fetchone()
+
+                    if not subtopic:
+                        continue
+
+                    cur.execute(
+                        """
+                        INSERT INTO question_progress (question_subtopics_id, student_username, status)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (question_subtopics_id) DO NOTHING
+                        """,
+                        (subtopic["question_subtopics_id"], student_username, default_status),
+                    )
+                    created_or_existing.append(dict(subtopic))
+
+                conn.commit()
+
+        return created_or_existing
 
     def get_question_subtopics(self, question_id: int) -> List[dict]:
         with db_session.get_connection() as conn:
