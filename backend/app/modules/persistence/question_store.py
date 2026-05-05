@@ -435,16 +435,17 @@ class QuestionStore:
                     """
                     SELECT
                         qa.question_id,
-                        qa.question_name,
                         CASE
-                            WHEN COUNT(qs.question_subtopics_id) = 0 THEN 'TODO'
-                            WHEN COUNT(qs.question_subtopics_id) FILTER (
-                                WHERE COALESCE(qp.status, 'yet_to_start') = 'completed'
-                            ) = COUNT(qs.question_subtopics_id) THEN 'completed'
-                            WHEN COUNT(qs.question_subtopics_id) FILTER (
-                                WHERE COALESCE(qp.status, 'yet_to_start') = 'in_progress'
-                            ) > 0 THEN 'InProgress'
-                            ELSE 'TODO'
+                            WHEN qs.question_subtopics_id IS NULL THEN qa.question_name
+                            ELSE qa.question_name || ':' || qs.subtopic_name
+                        END AS question_name,
+                        CASE
+                            WHEN qs.question_subtopics_id IS NULL THEN 'TODO'
+                            ELSE CASE COALESCE(qp.status, 'yet_to_start')
+                                WHEN 'completed' THEN 'completed'
+                                WHEN 'in_progress' THEN 'InProgress'
+                                ELSE 'TODO'
+                            END
                         END AS status
                     FROM question_assignments qa
                     LEFT JOIN question_subtopics qs
@@ -454,8 +455,7 @@ class QuestionStore:
                         AND qp.student_username = qa.student_username
                     WHERE qa.student_username = %s
                       AND qa.curriculum_book_name = %s
-                    GROUP BY qa.question_id, qa.question_name
-                    ORDER BY qa.question_id
+                    ORDER BY qa.question_id, qs.question_subtopics_id NULLS FIRST
                     """,
                     (student_username, curriculum_book_name)
                 )
