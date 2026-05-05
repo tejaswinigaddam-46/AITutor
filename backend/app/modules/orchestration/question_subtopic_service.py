@@ -1,5 +1,5 @@
 from typing import List, Optional
-from app.db.question_store import question_store
+from app.modules.persistence.question_store import question_store
 
 
 class QuestionSubtopicService:

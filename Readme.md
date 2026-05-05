@@ -18,15 +18,26 @@ A comprehensive AI-powered tutor application built with a FastAPI backend and a 
 
 ```text
 AITutor/
-├── backend/            # FastAPI application
-│   ├── app/            # Application logic (API, Core, DB, Services)
-│   ├── tests/          # Backend unit and integration tests
-│   └── requirements.txt # Python dependencies
-├── frontend/           # React + Vite application
-│   ├── src/            # UI components and logic
-│   ├── public/         # Static assets
-│   └── package.json    # Frontend dependencies and scripts
-└── README.md           # Project documentation (you are here)
+├── backend/                         # FastAPI application
+│   ├── app/
+│   │   ├── api/
+│   │   │   └── v1/                  # Versioned API routes (ai, documents, conversations, questions)
+│   │   ├── core/                    # Settings + security (API key, JWT, CORS)
+│   │   ├── db/                      # DB/session/vector DB wiring
+│   │   ├── modules/                 # Orchestration + LLM + RAG logic
+│   │   ├── schemas/                 # Pydantic schemas
+│   │   └── main.py                  # FastAPI app entrypoint
+│   ├── tests/                       # Backend tests
+│   ├── .env.example                 # Backend env template
+│   └── requirements.txt             # Python dependencies
+├── frontend/                        # React + Vite application
+│   ├── public/                      # Static assets
+│   ├── src/
+│   │   ├── App.jsx                  # Main UI
+│   │   └── api.js                   # Axios client + API calls
+│   ├── vite.config.js               # Vite dev server config
+│   └── package.json                 # Frontend dependencies and scripts
+└── Readme.md                        # Project documentation (you are here)
 ```
 
 ---
@@ -74,6 +85,8 @@ AITutor/
     uvicorn app.main:app --reload
     ```
     The API will be available at `http://localhost:8000`.
+    
+    Primary base path (versioned): `http://localhost:8000/api/v1`
 
 ---
 
@@ -92,9 +105,10 @@ AITutor/
 3.  **Configure Environment Variables**:
     Create a `.env` file in the `frontend` folder:
     ```bash
-    VITE_API_BASE_URL=http://localhost:8000/api/v1
+    VITE_API_URL=http://localhost:8000/api/v1
     VITE_API_KEY=your-super-secret-api-key
     ```
+    Ensure your backend CORS allows the Vite origin (default: `http://localhost:5173`).
 
 4.  **Run the Frontend**:
     ```bash

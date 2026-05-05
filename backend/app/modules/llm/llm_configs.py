@@ -2,7 +2,7 @@
 from typing import Callable, Dict, Type
 from pydantic import BaseModel
 from app.schemas.rag import AITutorResponse
-from app.services.SelfLearningPrompt import TUTOR_SYSTEM_PROMPT, TUTOR_RESPONSE_FORMAT
+from app.modules.llm.prompts.SelfLearningPrompt import TUTOR_SYSTEM_PROMPT, TUTOR_RESPONSE_FORMAT
 
 class LLMConfig:
     def __init__(
@@ -50,5 +50,5 @@ tutor_config = LLMConfig(
 )
 
 # You can add more configs here, e.g.:
-# from app.services.TeacherGuidedPrompt import TEACHER_GUIDED_SYSTEM_PROMPT, TEACHER_GUIDED_RESPONSE_FORMAT
+# from app.modules.llm.prompts.TeacherGuidedPrompt import TEACHER_GUIDED_SYSTEM_PROMPT, TEACHER_GUIDED_RESPONSE_FORMAT
 # teacher_guided_config = LLMConfig(...)

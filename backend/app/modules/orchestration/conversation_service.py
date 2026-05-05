@@ -1,7 +1,6 @@
 from typing import List, Optional, Tuple
 from uuid import UUID, uuid4
-from app.db.conversation_store import conversation_store
-from app.services.llm_service import llm_service
+from app.modules.persistence.conversation_store import conversation_store
 
 
 class ConversationService:

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.rag import Query, Answer
-from app.services.rag_service import rag_service
+from app.modules.orchestration.rag_service import rag_service
 from app.core.security import get_current_username
 
 router = APIRouter()

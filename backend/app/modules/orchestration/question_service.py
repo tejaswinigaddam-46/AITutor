@@ -1,6 +1,6 @@
 from typing import List, Optional
-from app.db.question_store import question_store
-from app.services.question_subtopic_service import question_subtopic_service
+from app.modules.persistence.question_store import question_store
+from app.modules.orchestration.question_subtopic_service import question_subtopic_service
 
 
 class QuestionService:

@@ -26,10 +26,10 @@ app.add_middleware(
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Compatibility alias for external repos calling /ai/query
-from app.api.v1.endpoints.rag import router as rag_router
-from app.api.v1.endpoints.conversation import router as conversation_router
-from app.api.v1.endpoints.document import router as document_router
-from app.api.v1.endpoints.question import router as question_router
+from app.api.v1.rag import router as rag_router
+from app.api.v1.conversation import router as conversation_router
+from app.api.v1.document import router as document_router
+from app.api.v1.question import router as question_router
 
 app.include_router(rag_router, prefix="/ai", tags=["compatibility"])
 app.include_router(conversation_router, prefix="/conversations", tags=["compatibility"])

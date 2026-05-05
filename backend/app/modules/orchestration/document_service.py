@@ -2,8 +2,8 @@ import json
 import re
 import tiktoken
 from typing import List, Dict
-from app.services.embedding_service import embedding_service
-from app.db.vector_store import vector_store
+from app.modules.rag.embedding_service import embedding_service
+from app.modules.rag.vector_store import vector_store
 
 class DocumentService:
     def __init__(self, model: str = "gpt-3.5-turbo"):

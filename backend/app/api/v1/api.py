@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.api.v1.endpoints import rag, document, conversation, question
+from app.api.v1 import rag, document, conversation, question
 from app.core.security import get_api_key
 
 api_router = APIRouter(dependencies=[Depends(get_api_key)])

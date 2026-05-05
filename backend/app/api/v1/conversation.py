@@ -7,7 +7,7 @@ from app.schemas.conversation import (
     MessageRead, 
     ConversationRead,
 )
-from app.services.conversation_service import conversation_service
+from app.modules.orchestration.conversation_service import conversation_service
 from app.core.security import get_current_username
 
 logger = logging.getLogger(__name__)

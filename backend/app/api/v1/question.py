@@ -11,8 +11,8 @@ from app.schemas.question import (
     QuestionProgressRead,
     QuestionProgressUpdate
 )
-from app.services.question_service import question_service
-from app.services.question_subtopic_service import question_subtopic_service
+from app.modules.orchestration.question_service import question_service
+from app.modules.orchestration.question_subtopic_service import question_subtopic_service
 from app.core.security import get_current_username
 
 logger = logging.getLogger(__name__)

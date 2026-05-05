@@ -5,7 +5,7 @@ from typing import Any, Dict, Type, Callable
 from openai import AsyncOpenAI
 from pydantic import BaseModel, ValidationError
 from app.core.config import settings
-from app.db.conversation_store import conversation_store
+from app.modules.persistence.conversation_store import conversation_store
 
 logger = logging.getLogger(__name__)
 
