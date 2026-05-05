@@ -201,7 +201,7 @@ class QuestionStore:
         if not question_assignment:
             raise ValueError(f"Question assignment with id {question_id} not found")
 
-        valid_statuses = ["yet_to_start", "in_progress", "completed"]
+        valid_statuses = ["yet_to_start", "in_progress", "completed", "learning"]
         if default_status not in valid_statuses:
             raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
 
@@ -434,6 +434,7 @@ class QuestionStore:
                 cur.execute(
                     """
                     SELECT
+                        qs.question_subtopics_id,
                         qa.question_id,
                         CASE
                             WHEN qs.question_subtopics_id IS NULL THEN qa.question_name
@@ -444,6 +445,7 @@ class QuestionStore:
                             ELSE CASE COALESCE(qp.status, 'yet_to_start')
                                 WHEN 'completed' THEN 'completed'
                                 WHEN 'in_progress' THEN 'InProgress'
+                                WHEN 'learning' THEN 'learning'
                                 ELSE 'TODO'
                             END
                         END AS status

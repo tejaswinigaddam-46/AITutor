@@ -97,6 +97,12 @@ async def get_questions_progress(
             book.value,
             len(results)
         )
+        logger.info(
+            "Questions progress payload for student=%s book=%s: %s",
+            student_username,
+            book.value,
+            results,
+        )
         return results
     except ValueError as e:
         logger.warning(f"Error getting questions progress: {str(e)}")

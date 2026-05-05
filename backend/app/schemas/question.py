@@ -10,12 +10,15 @@ class QuestionProgressStatus(str, Enum):
     YET_TO_START = "yet_to_start"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
+    LEARNING = "learning"
 
 
 class QuestionOverallStatus(str, Enum):
     TODO = "TODO"
     IN_PROGRESS = "InProgress"
     COMPLETED = "completed"
+    LEARNING = "learning"
+
 
 
 class QuestionAssignmentBase(BaseModel):
@@ -84,6 +87,7 @@ class QuestionAssignmentWithSubtopics(QuestionAssignmentRead):
 
 
 class QuestionProgressSummary(BaseModel):
+    question_subtopics_id: Optional[int] = None
     question_id: int
     question_name: str
     status: QuestionOverallStatus

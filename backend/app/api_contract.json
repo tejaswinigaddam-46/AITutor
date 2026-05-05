@@ -580,7 +580,7 @@
         "question_subtopics_id": "int (required)"
       },
       "request_schema": {
-        "status": "\"yet_to_start\" | \"in_progress\" | \"completed\" (required)"
+        "status": "\"yet_to_start\" | \"in_progress\" | \"learning\" | \"completed\" (required)"
       },
       "request_example": {
         "status": "completed"

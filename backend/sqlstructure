@@ -97,6 +97,6 @@ CREATE TABLE question_assignments (
 CREATE TABLE question_progress (
     question_subtopics_id BIGINT PRIMARY KEY REFERENCES question_subtopics(question_subtopics_id) ON DELETE CASCADE,
     student_username VARCHAR(100) NOT NULL,
-    status VARCHAR(20) NOT NULL CHECK (status IN ('yet_to_start', 'in_progress', 'completed')),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('yet_to_start', 'in_progress','learning', 'completed')),
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

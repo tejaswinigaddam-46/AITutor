@@ -50,7 +50,7 @@ class QuestionSubtopicService:
     ) -> dict:
         if not student_username or not student_username.strip():
             raise ValueError("Student username cannot be empty")
-        valid_statuses = ['yet_to_start', 'in_progress', 'completed']
+        valid_statuses = ['yet_to_start', 'in_progress', 'completed', 'learning']
         if status not in valid_statuses:
             raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
         
@@ -71,7 +71,7 @@ class QuestionSubtopicService:
         question_subtopics_id: int,
         status: str
     ) -> Optional[dict]:
-        valid_statuses = ['yet_to_start', 'in_progress', 'completed']
+        valid_statuses = ['yet_to_start', 'in_progress', 'completed', 'learning']
         if status not in valid_statuses:
             raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
         
