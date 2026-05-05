@@ -4,6 +4,7 @@ from uuid import UUID
 
 class Query(BaseModel):
     question: str
+    book_name: str
     conversation_id: Optional[UUID] = None
 
 class Option(BaseModel):
@@ -44,3 +45,30 @@ class Answer(BaseModel):
     answer: AITutorResponse | str
     sources: List[Source]
     summary: Optional[str] = None
+
+
+class TeacherFeedbackAnswerPlanItem(BaseModel):
+    subtopic: str
+
+    class Config:
+        extra = "forbid"
+
+
+class TeacherFeedbackOverviewResponse(BaseModel):
+    topic: str
+    answer_plan: List[TeacherFeedbackAnswerPlanItem] = Field(..., min_items=3)
+
+    class Config:
+        extra = "forbid"
+
+
+class FeedbackOverviewQuery(BaseModel):
+    topic: str
+    no_of_chunks: int = 5
+    book_name: str
+    conversation_id: Optional[UUID] = None
+
+
+class FeedbackOverviewAnswer(BaseModel):
+    answer: TeacherFeedbackOverviewResponse | str
+    sources: List[Source]

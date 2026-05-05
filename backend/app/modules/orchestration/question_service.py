@@ -50,6 +50,21 @@ class QuestionService:
             assigned_by_username=assigned_by_username
         )
 
+    def get_questions_progress(
+        self,
+        student_username: str,
+        curriculum_book_name: str
+    ) -> List[dict]:
+        if not student_username or not student_username.strip():
+            raise ValueError("Student username cannot be empty")
+        if not curriculum_book_name or not str(curriculum_book_name).strip():
+            raise ValueError("Curriculum book name cannot be empty")
+
+        return question_store.get_questions_progress(
+            student_username=student_username,
+            curriculum_book_name=curriculum_book_name
+        )
+
     def get_question_assignment_with_subtopics(self, question_id: int) -> Optional[dict]:
         assignment = question_store.get_question_assignment(question_id)
         if not assignment:

@@ -9,10 +9,12 @@ from app.schemas.question import (
     QuestionSubtopicCreate,
     QuestionSubtopicRead,
     QuestionProgressRead,
-    QuestionProgressUpdate
+    QuestionProgressUpdate,
+    QuestionProgressSummary
 )
 from app.modules.orchestration.question_service import question_service
 from app.modules.orchestration.question_subtopic_service import question_subtopic_service
+from app.schemas.conversation import CurriculumBookEnum
 from app.core.security import get_current_username
 
 logger = logging.getLogger(__name__)
@@ -76,6 +78,33 @@ async def list_question_assignments_by_exam(
     except Exception as e:
         logger.error(f"Error listing question assignments for exam: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/assignments/progress", response_model=List[QuestionProgressSummary])
+async def get_questions_progress(
+    student_username: str = Query(..., alias="studentusername"),
+    book: CurriculumBookEnum = Query(..., alias="book"),
+    username: str = Depends(get_current_username)
+):
+    try:
+        results = question_service.get_questions_progress(
+            student_username=student_username,
+            curriculum_book_name=book.value
+        )
+        logger.info(
+            "Get questions progress for student=%s book=%s count=%s",
+            student_username,
+            book.value,
+            len(results)
+        )
+        return results
+    except ValueError as e:
+        logger.warning(f"Error getting questions progress: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error getting questions progress: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/assignments/{question_id}", response_model=QuestionAssignmentWithSubtopics)
 async def get_question_assignment(

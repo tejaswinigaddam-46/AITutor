@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     API_KEY_NAME: str = "X-API-KEY"
     # No default value for API_KEY to force it to be set in environment/dotenv
     API_KEY: str 
+    DISABLE_API_KEY_AUTH: bool = False
 
     # JWT Configuration
     JWT_SECRET: str = ""

@@ -5,28 +5,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
-
 from app.modules.llm.llm_service import llm_service
 from app.modules.orchestration.rag_service import rag_service
+from app.schemas.rag import TeacherFeedbackOverviewResponse
 
 logger = logging.getLogger(__name__)
-
-
-class AnswerPlanItem(BaseModel):
-    subtopic: str
-
-    class Config:
-        extra = "forbid"
-
-
-class TeacherFeedbackOverviewResponse(BaseModel):
-    topic: str
-    answer_plan: List[AnswerPlanItem] = Field(..., min_items=3)
-
-    class Config:
-        extra = "forbid"
-
 
 class TeacherFeedbackService:
     def __init__(self) -> None:

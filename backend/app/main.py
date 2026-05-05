@@ -42,7 +42,7 @@ async def health_check():
 
 @app.get("/")
 def root():
-    return {"message": "Welcome to AI Tutor RAG API"}
+    return {"message": "Welcome to AI Tutor"}
 
 if __name__ == "__main__":
     import uvicorn

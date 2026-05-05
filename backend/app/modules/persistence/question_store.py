@@ -361,5 +361,43 @@ class QuestionStore:
                 results = cur.fetchall()
                 return [dict(r) for r in results]
 
+    def get_questions_progress(
+        self,
+        student_username: str,
+        curriculum_book_name: str
+    ) -> List[dict]:
+        with db_session.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        qa.question_id,
+                        qa.question_name,
+                        CASE
+                            WHEN COUNT(qs.question_subtopics_id) = 0 THEN 'TODO'
+                            WHEN COUNT(qs.question_subtopics_id) FILTER (
+                                WHERE COALESCE(qp.status, 'yet_to_start') = 'completed'
+                            ) = COUNT(qs.question_subtopics_id) THEN 'completed'
+                            WHEN COUNT(qs.question_subtopics_id) FILTER (
+                                WHERE COALESCE(qp.status, 'yet_to_start') = 'in_progress'
+                            ) > 0 THEN 'InProgress'
+                            ELSE 'TODO'
+                        END AS status
+                    FROM question_assignments qa
+                    LEFT JOIN question_subtopics qs
+                        ON qs.question_id = qa.question_id
+                    LEFT JOIN question_progress qp
+                        ON qp.question_subtopics_id = qs.question_subtopics_id
+                        AND qp.student_username = qa.student_username
+                    WHERE qa.student_username = %s
+                      AND qa.curriculum_book_name = %s
+                    GROUP BY qa.question_id, qa.question_name
+                    ORDER BY qa.question_id
+                    """,
+                    (student_username, curriculum_book_name)
+                )
+                rows = cur.fetchall()
+                return [dict(r) for r in rows]
+
 
 question_store = QuestionStore()

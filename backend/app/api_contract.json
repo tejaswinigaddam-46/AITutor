@@ -1,0 +1,596 @@
+{
+  "service": "AITutor backend",
+  "date": "2026-05-05",
+  "base_paths": {
+    "v1": "/api/v1",
+    "compatibility": ""
+  },
+  "authentication": {
+    "api_key": {
+      "applies_to": "/api/v1/*",
+      "header": "X-API-KEY",
+      "value": "<server-issued-api-key>"
+    },
+    "jwt": {
+      "applies_to": "endpoints that require user context",
+      "header": "Authorization",
+      "value": "Bearer <jwt>"
+    }
+  },
+  "endpoints": [
+    {
+      "name": "Health (v1)",
+      "method": "GET",
+      "path": "/api/v1/health",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>"
+      },
+      "request": null,
+      "response_example": {
+        "status": "ok",
+        "message": "API V1 is healthy"
+      }
+    },
+    {
+      "name": "Health (compatibility)",
+      "method": "GET",
+      "path": "/health",
+      "headers": {},
+      "request": null,
+      "response_example": {
+        "status": "ok",
+        "message": "API is healthy"
+      }
+    },
+    {
+      "name": "Root",
+      "method": "GET",
+      "path": "/",
+      "headers": {},
+      "request": null,
+      "response_example": {
+        "message": "Welcome to AI Tutor"
+      }
+    },
+    {
+      "name": "AI Tutor (RAG) - answer query",
+      "method": "POST",
+      "path": "/api/v1/ai/query",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "request_schema": {
+        "question": "string (required)",
+        "book_name": "string (required)",
+        "conversation_id": "uuid (optional)"
+      },
+      "request_example": {
+        "question": "Explain Newton's Second Law with an example.",
+        "book_name": "GOV_SSC_PHYSICS",
+        "conversation_id": "00000000-0000-0000-0000-000000000000"
+      },
+      "response_schema": {
+        "answer": "AITutorResponse | string",
+        "sources": "Source[]",
+        "summary": "string | null"
+      },
+      "response_example": {
+        "answer": {
+          "status": "200",
+          "message": "Fetched successfully",
+          "topic_breakdown": [
+            "Force",
+            "Mass",
+            "Acceleration"
+          ],
+          "current_subtopic": "Newton's Second Law",
+          "textbook_points": [
+            "Force is proportional to acceleration.",
+            "F = m * a."
+          ],
+          "simple_explanation": "The heavier an object is, the more force it needs to speed up by the same amount.",
+          "example": "A 2 kg cart needs 6 N to accelerate at 3 m/s^2.",
+          "memory_trick": "F = ma: Force makes acceleration.",
+          "why_it_works": "It follows from defining net force as the rate of change of momentum.",
+          "practice": [
+            {
+              "question": "If m=5 kg and a=2 m/s^2, what is F?",
+              "options": [
+                { "id": "A", "text": "10 N" },
+                { "id": "B", "text": "7 N" },
+                { "id": "C", "text": "2.5 N" },
+                { "id": "D", "text": "25 N" }
+              ],
+              "correct_answer": "A",
+              "explanation": "F = m*a = 5*2 = 10 N."
+            }
+          ],
+          "next_step": "Try a problem where two forces act in opposite directions.",
+          "summary": "Newton's Second Law relates force, mass and acceleration."
+        },
+        "sources": [
+          {
+            "id": 123,
+            "curriculum_book_name": "GOV_SSC_PHYSICS",
+            "book_name": "Physics",
+            "chapter": "Forces",
+            "page_number": 42,
+            "content": "Newton's Second Law states ...",
+            "distance": 0.12,
+            "chunk_metadata": {
+              "chunk_index": 3
+            }
+          }
+        ],
+        "summary": "Newton's Second Law relates force, mass and acceleration."
+      }
+    },
+    {
+      "name": "AI Tutor (RAG) - feedback overview",
+      "method": "POST",
+      "path": "/api/v1/ai/feedback-overview",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "request_schema": {
+        "topic": "string (required)",
+        "no_of_chunks": "int (optional, default=5)",
+        "book_name": "string (required)",
+        "conversation_id": "uuid | null (optional)"
+      },
+      "request_example": {
+        "topic": "Photosynthesis",
+        "no_of_chunks": 5,
+        "book_name": "Biology",
+        "conversation_id": "00000000-0000-0000-0000-000000000000"
+      },
+      "response_schema": {
+        "answer": "TeacherFeedbackOverviewResponse | string",
+        "sources": "Source[]"
+      },
+      "response_example": {
+        "answer": {
+          "topic": "Photosynthesis",
+          "answer_plan": [
+            { "subtopic": "Definition and purpose" },
+            { "subtopic": "Chloroplast structure and role of chlorophyll" },
+            { "subtopic": "Light reaction vs dark reaction (Calvin cycle)" }
+          ]
+        },
+        "sources": [
+          {
+            "id": 456,
+            "curriculum_book_name": "GOV_SSC_CHEMISTRY",
+            "book_name": "Biology",
+            "chapter": "Plant Processes",
+            "page_number": 88,
+            "content": "Photosynthesis is ...",
+            "distance": 0.19,
+            "chunk_metadata": {
+              "chunk_index": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Documents - upload",
+      "method": "POST",
+      "path": "/api/v1/documents/upload",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Content-Type": "multipart/form-data"
+      },
+      "request_schema": {
+        "curriculum_book_name": "string (required)",
+        "document_id": "int (required)",
+        "subject": "string (required)",
+        "json_file": "file (required)",
+        "md_file": "file (required)"
+      },
+      "request_example": {
+        "curriculum_book_name": "GOV_SSC_PHYSICS",
+        "document_id": 1,
+        "subject": "physics",
+        "json_file": "<upload .json file>",
+        "md_file": "<upload .md file>"
+      },
+      "response_example": {
+        "filename": "chapter1.md",
+        "status": "success"
+      }
+    },
+    {
+      "name": "Documents - list",
+      "method": "GET",
+      "path": "/api/v1/documents/",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>"
+      },
+      "request": null,
+      "response_example": [
+        {
+          "curriculum_book_name": "GOV_SSC_PHYSICS",
+          "subject": "Physics"
+        }
+      ]
+    },
+    {
+      "name": "Conversations - create message",
+      "method": "POST",
+      "path": "/api/v1/conversations/messages",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "request_schema": {
+        "role": "\"user\" | \"assistant\" (required)",
+        "content": "string (required)",
+        "conversation_id": "uuid | null (optional)",
+        "curriculum_book_name": "\"GOV_SSC_ENGLISH\" | \"GOV_SSC_PHYSICS\" | \"GOV_SSC_CHEMISTRY\" (required)",
+        "title": "string | null (optional)",
+        "summary": "string | null (optional)"
+      },
+      "request_example": {
+        "role": "user",
+        "content": "Explain inertia.",
+        "conversation_id": null,
+        "curriculum_book_name": "GOV_SSC_PHYSICS",
+        "title": "Inertia",
+        "summary": null
+      },
+      "response_example": {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "conversation_id": "00000000-0000-0000-0000-000000000000",
+        "role": "user",
+        "content": "Explain inertia.",
+        "summary": null,
+        "created_at": "2026-05-05T00:00:00Z"
+      }
+    },
+    {
+      "name": "Conversations - list",
+      "method": "GET",
+      "path": "/api/v1/conversations",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "request": null,
+      "response_example": [
+        {
+          "id": "00000000-0000-0000-0000-000000000000",
+          "username": "alice",
+          "curriculum_book_name": "GOV_SSC_PHYSICS",
+          "title": "Inertia",
+          "created_at": "2026-05-05T00:00:00Z",
+          "updated_at": "2026-05-05T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "name": "Conversations - get",
+      "method": "GET",
+      "path": "/api/v1/conversations/{conversation_id}",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "conversation_id": "uuid (required)"
+      },
+      "response_example": {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "username": "alice",
+        "curriculum_book_name": "GOV_SSC_PHYSICS",
+        "title": "Inertia",
+        "created_at": "2026-05-05T00:00:00Z",
+        "updated_at": "2026-05-05T00:00:00Z"
+      }
+    },
+    {
+      "name": "Conversations - list messages",
+      "method": "GET",
+      "path": "/api/v1/conversations/{conversation_id}/messages",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "conversation_id": "uuid (required)"
+      },
+      "response_example": [
+        {
+          "id": "00000000-0000-0000-0000-000000000000",
+          "conversation_id": "00000000-0000-0000-0000-000000000000",
+          "role": "user",
+          "content": "Explain inertia.",
+          "summary": null,
+          "created_at": "2026-05-05T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "name": "Conversations - delete",
+      "method": "DELETE",
+      "path": "/api/v1/conversations/{conversation_id}",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "conversation_id": "uuid (required)"
+      },
+      "response_example": {
+        "status": "success",
+        "message": "Conversation deleted"
+      }
+    },
+    {
+      "name": "Conversations - delete message",
+      "method": "DELETE",
+      "path": "/api/v1/conversations/messages/{message_id}",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "message_id": "uuid (required)"
+      },
+      "response_example": {
+        "status": "success",
+        "message": "Message deleted"
+      }
+    },
+    {
+      "name": "Questions - create assignment",
+      "method": "POST",
+      "path": "/api/v1/questions/assignments",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "request_schema": {
+        "question_name": "string (required)",
+        "curriculum_book_name": "\"GOV_SSC_ENGLISH\" | \"GOV_SSC_PHYSICS\" | \"GOV_SSC_CHEMISTRY\" (required)",
+        "student_username": "string (required)",
+        "exam_id": "uuid (required)"
+      },
+      "response_example": {
+        "question_id": 1,
+        "question_name": "Newton's Laws",
+        "curriculum_book_name": "GOV_SSC_PHYSICS",
+        "student_username": "student1",
+        "exam_id": "00000000-0000-0000-0000-000000000000",
+        "assigned_by_username": "teacher1",
+        "assigned_at": "2026-05-05T00:00:00Z"
+      }
+    },
+    {
+      "name": "Questions - list assignments",
+      "method": "GET",
+      "path": "/api/v1/questions/assignments",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "query_params": {
+        "student_username": "string | null (optional)"
+      },
+      "response_example": [
+        {
+          "question_id": 1,
+          "question_name": "Newton's Laws",
+          "curriculum_book_name": "GOV_SSC_PHYSICS",
+          "student_username": "student1",
+          "exam_id": "00000000-0000-0000-0000-000000000000",
+          "assigned_by_username": "teacher1",
+          "assigned_at": "2026-05-05T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "name": "Questions - list assignments by exam",
+      "method": "GET",
+      "path": "/api/v1/questions/assignments/exam/{exam_id}",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "exam_id": "uuid (required)"
+      },
+      "query_params": {
+        "student_username": "string (required)"
+      },
+      "response_example": [
+        {
+          "question_id": 1,
+          "question_name": "Newton's Laws",
+          "curriculum_book_name": "GOV_SSC_PHYSICS",
+          "student_username": "student1",
+          "exam_id": "00000000-0000-0000-0000-000000000000",
+          "assigned_by_username": "teacher1",
+          "assigned_at": "2026-05-05T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "name": "Questions - get questions progress",
+      "method": "GET",
+      "path": "/api/v1/questions/assignments/progress",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "query_params": {
+        "studentusername": "string (required)",
+        "book": "\"GOV_SSC_ENGLISH\" | \"GOV_SSC_PHYSICS\" | \"GOV_SSC_CHEMISTRY\" (required)"
+      },
+      "response_example": [
+        {
+          "question_id": 1,
+          "question_name": "Newton's Laws",
+          "status": "InProgress"
+        },
+        {
+          "question_id": 2,
+          "question_name": "Kinematics",
+          "status": "TODO"
+        },
+        {
+          "question_id": 3,
+          "question_name": "Work and Energy",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "name": "Questions - get assignment with subtopics",
+      "method": "GET",
+      "path": "/api/v1/questions/assignments/{question_id}",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "question_id": "int (required)"
+      },
+      "response_example": {
+        "question_id": 1,
+        "question_name": "Newton's Laws",
+        "curriculum_book_name": "GOV_SSC_PHYSICS",
+        "student_username": "student1",
+        "exam_id": "00000000-0000-0000-0000-000000000000",
+        "assigned_by_username": "teacher1",
+        "assigned_at": "2026-05-05T00:00:00Z",
+        "subtopics": [
+          {
+            "question_id": 1,
+            "subtopic_name": "First law",
+            "question_subtopics_id": 10,
+            "progress": {
+              "question_subtopics_id": 10,
+              "status": "in_progress",
+              "student_username": "student1",
+              "updated_at": "2026-05-05T00:00:00Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Questions - delete assignment",
+      "method": "DELETE",
+      "path": "/api/v1/questions/assignments/{question_id}",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "question_id": "int (required)"
+      },
+      "response_example": {
+        "status": "success",
+        "message": "Question assignment deleted"
+      }
+    },
+    {
+      "name": "Questions - create subtopic",
+      "method": "POST",
+      "path": "/api/v1/questions/subtopics",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "request_schema": {
+        "question_id": "int (required)",
+        "subtopic_name": "string (required)"
+      },
+      "response_example": {
+        "question_id": 1,
+        "subtopic_name": "Second law",
+        "question_subtopics_id": 11
+      }
+    },
+    {
+      "name": "Questions - list subtopics by assignment",
+      "method": "GET",
+      "path": "/api/v1/questions/assignments/{question_id}/subtopics",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "question_id": "int (required)"
+      },
+      "response_example": [
+        {
+          "question_id": 1,
+          "subtopic_name": "Second law",
+          "question_subtopics_id": 11
+        }
+      ]
+    },
+    {
+      "name": "Questions - delete subtopic",
+      "method": "DELETE",
+      "path": "/api/v1/questions/subtopics/{question_subtopics_id}",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "question_subtopics_id": "int (required)"
+      },
+      "response_example": {
+        "status": "success",
+        "message": "Question subtopic deleted"
+      }
+    },
+    {
+      "name": "Questions - get progress",
+      "method": "GET",
+      "path": "/api/v1/questions/subtopics/{question_subtopics_id}/progress",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "question_subtopics_id": "int (required)"
+      },
+      "response_example": {
+        "question_subtopics_id": 11,
+        "status": "yet_to_start",
+        "student_username": "student1",
+        "updated_at": "2026-05-05T00:00:00Z"
+      }
+    },
+    {
+      "name": "Questions - update progress",
+      "method": "PUT",
+      "path": "/api/v1/questions/subtopics/{question_subtopics_id}/progress",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "question_subtopics_id": "int (required)"
+      },
+      "request_schema": {
+        "status": "\"yet_to_start\" | \"in_progress\" | \"completed\" (required)"
+      },
+      "request_example": {
+        "status": "completed"
+      },
+      "response_example": {
+        "question_subtopics_id": 11,
+        "status": "completed",
+        "student_username": "student1",
+        "updated_at": "2026-05-05T00:00:00Z"
+      }
+    }
+  ]
+}
