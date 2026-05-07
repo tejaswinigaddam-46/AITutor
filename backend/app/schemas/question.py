@@ -4,6 +4,7 @@ from typing import List, Optional
 from enum import Enum
 from uuid import UUID
 from app.schemas.conversation import CurriculumBookEnum
+from app.schemas.rag import Answer
 
 
 class QuestionProgressStatus(str, Enum):
@@ -55,6 +56,19 @@ class QuestionSubtopicRead(QuestionSubtopicBase):
 
     class Config:
         from_attributes = True
+
+
+class QuestionSubtopicRequest(BaseModel):
+    question_subtopics_id: int
+    question: Optional[str] = None
+
+
+class QuestionSubtopicRequestAnswer(BaseModel):
+    question_subtopics_id: int
+    question_id: int
+    subtopic_name: str
+    conversation_id: UUID
+    ai: Answer
 
 
 class QuestionProgressBase(BaseModel):

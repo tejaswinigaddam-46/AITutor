@@ -8,6 +8,8 @@ from app.schemas.question import (
     QuestionAssignmentWithSubtopics,
     QuestionSubtopicCreate,
     QuestionSubtopicRead,
+    QuestionSubtopicRequest,
+    QuestionSubtopicRequestAnswer,
     QuestionProgressRead,
     QuestionProgressUpdate,
     QuestionProgressSummary
@@ -160,6 +162,25 @@ async def create_question_subtopic(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/subtopics/request", response_model=QuestionSubtopicRequestAnswer)
+async def request_subtopic(
+    request_data: QuestionSubtopicRequest,
+    username: str = Depends(get_current_username),
+):
+    try:
+        return await question_subtopic_service.request_subtopic(
+            question_subtopics_id=request_data.question_subtopics_id,
+            username=username,
+            question=request_data.question,
+        )
+    except ValueError as e:
+        logger.warning(f"Error requesting subtopic: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Internal server error requesting subtopic: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -80,6 +80,7 @@ CREATE TABLE question_subtopics (
     question_subtopics_id SERIAL PRIMARY KEY,
     question_id INT REFERENCES question_assignments(question_id) ON DELETE CASCADE,
     subtopic_name TEXT NOT NULL,
+    conversation_id UUID references conversations(id) ON DELETE cascade,
     UNIQUE (question_id, subtopic_name)
 );
 

@@ -273,13 +273,69 @@ class QuestionStore:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     """
-                    SELECT question_subtopics_id, question_id, subtopic_name
+                    SELECT question_subtopics_id, question_id, subtopic_name, conversation_id
                     FROM question_subtopics
                     WHERE question_subtopics_id = %s
                     """,
                     (question_subtopics_id,)
                 )
                 subtopic = cur.fetchone()
+                return dict(subtopic) if subtopic else None
+
+    def get_question_subtopic_by_name(self, question_id: int, subtopic_name: str) -> Optional[dict]:
+        with db_session.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT question_subtopics_id, question_id, subtopic_name, conversation_id
+                    FROM question_subtopics
+                    WHERE question_id = %s AND subtopic_name = %s
+                    """,
+                    (question_id, subtopic_name),
+                )
+                subtopic = cur.fetchone()
+                return dict(subtopic) if subtopic else None
+
+    def upsert_question_subtopic_conversation_id(
+        self,
+        question_id: int,
+        subtopic_name: str,
+        conversation_id: str,
+    ) -> dict:
+        with db_session.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    INSERT INTO question_subtopics (question_id, subtopic_name, conversation_id)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (question_id, subtopic_name) DO UPDATE
+                    SET conversation_id = COALESCE(question_subtopics.conversation_id, EXCLUDED.conversation_id)
+                    RETURNING question_subtopics_id, question_id, subtopic_name, conversation_id
+                    """,
+                    (question_id, subtopic_name, conversation_id),
+                )
+                subtopic = cur.fetchone()
+                conn.commit()
+                return dict(subtopic)
+
+    def update_question_subtopic_conversation_id(
+        self,
+        question_subtopics_id: int,
+        conversation_id: str,
+    ) -> Optional[dict]:
+        with db_session.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    UPDATE question_subtopics
+                    SET conversation_id = COALESCE(question_subtopics.conversation_id, %s)
+                    WHERE question_subtopics_id = %s
+                    RETURNING question_subtopics_id, question_id, subtopic_name, conversation_id
+                    """,
+                    (conversation_id, question_subtopics_id),
+                )
+                subtopic = cur.fetchone()
+                conn.commit()
                 return dict(subtopic) if subtopic else None
 
     def update_question_subtopic(
