@@ -429,20 +429,35 @@
         "studentusername": "string (required)",
         "book": "\"GOV_SSC_ENGLISH\" | \"GOV_SSC_PHYSICS\" | \"GOV_SSC_CHEMISTRY\" (required)"
       },
+      "response_schema": [
+        {
+          "question_subtopics_id": "int | null",
+          "conversation_id": "uuid | null",
+          "question_id": "int",
+          "question_name": "string",
+          "status": "\"TODO\" | \"InProgress\" | \"completed\" | \"learning\""
+        }
+      ],
       "response_example": [
         {
+          "question_subtopics_id": null,
+          "conversation_id": null,
           "question_id": 1,
           "question_name": "Newton's Laws",
           "status": "InProgress"
         },
         {
+          "question_subtopics_id": null,
+          "conversation_id": null,
           "question_id": 2,
           "question_name": "Kinematics",
           "status": "TODO"
         },
         {
+          "question_subtopics_id": 33,
+          "conversation_id": "00000000-0000-0000-0000-000000000000",
           "question_id": 3,
-          "question_name": "Work and Energy",
+          "question_name": "Work and Energy:Kinetic energy",
           "status": "completed"
         }
       ]

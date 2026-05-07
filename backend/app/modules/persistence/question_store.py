@@ -491,6 +491,7 @@ class QuestionStore:
                     """
                     SELECT
                         qs.question_subtopics_id,
+                        qs.conversation_id,
                         qa.question_id,
                         CASE
                             WHEN qs.question_subtopics_id IS NULL THEN qa.question_name

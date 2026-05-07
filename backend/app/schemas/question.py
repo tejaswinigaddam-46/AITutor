@@ -102,6 +102,7 @@ class QuestionAssignmentWithSubtopics(QuestionAssignmentRead):
 
 class QuestionProgressSummary(BaseModel):
     question_subtopics_id: Optional[int] = None
+    conversation_id: Optional[UUID] = None
     question_id: int
     question_name: str
     status: QuestionOverallStatus
