@@ -3,6 +3,7 @@ from uuid import UUID
 from datetime import datetime
 from typing import List, Optional
 from enum import Enum
+from app.schemas.rag import Answer
 
 class CurriculumBookEnum(str, Enum):
     GOV_SSC_ENGLISH = "GOV_SSC_ENGLISH"
@@ -47,3 +48,18 @@ class ConversationRead(ConversationBase):
 
 class ConversationWithMessages(ConversationRead):
     messages: List[MessageRead]
+
+
+class ConversationAskRequest(BaseModel):
+    question: str = Field(..., min_length=1)
+    curriculum_book_name: CurriculumBookEnum
+    conversation_id: Optional[UUID] = None
+    title: Optional[str] = None
+
+
+class ConversationAskResponse(BaseModel):
+    conversation_id: UUID
+    is_new_conversation: bool
+    user_message: MessageRead
+    ai: Answer
+    assistant_message: MessageRead

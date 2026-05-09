@@ -1,13 +1,13 @@
 {
   "service": "AITutor backend",
-  "date": "2026-05-07",
+  "date": "2026-05-09",
   "base_paths": {
     "v1": "/api/v1",
     "compatibility": ""
   },
   "authentication": {
     "api_key": {
-      "applies_to": "/api/v1/*",
+      "applies_to": "/api/v1/* (API router endpoints only; framework docs/spec endpoints are excluded)",
       "header": "X-API-KEY",
       "value": "<server-issued-api-key>"
     },
@@ -19,7 +19,41 @@
   },
   "endpoints": [
     {
+      "name": "OpenAPI spec (v1)",
+      "summary": "Returns the OpenAPI JSON for this service (used by /docs and /redoc).",
+      "method": "GET",
+      "path": "/api/v1/openapi.json",
+      "headers": {},
+      "request": null,
+      "response_example": {
+        "openapi": "3.1.0",
+        "info": {
+          "title": "AITutor backend",
+          "version": "..."
+        }
+      }
+    },
+    {
+      "name": "Swagger UI",
+      "summary": "Interactive API documentation UI (FastAPI built-in).",
+      "method": "GET",
+      "path": "/docs",
+      "headers": {},
+      "request": null,
+      "response_example": "<html>...</html>"
+    },
+    {
+      "name": "ReDoc",
+      "summary": "Alternative interactive API documentation UI (FastAPI built-in).",
+      "method": "GET",
+      "path": "/redoc",
+      "headers": {},
+      "request": null,
+      "response_example": "<html>...</html>"
+    },
+    {
       "name": "Health (v1)",
+      "summary": "Health check for the versioned API router (requires API key).",
       "method": "GET",
       "path": "/api/v1/health",
       "headers": {
@@ -33,6 +67,7 @@
     },
     {
       "name": "Health (compatibility)",
+      "summary": "Health check for legacy clients (no API key, no JWT).",
       "method": "GET",
       "path": "/health",
       "headers": {},
@@ -44,6 +79,7 @@
     },
     {
       "name": "Root",
+      "summary": "Root landing endpoint (no API key, no JWT).",
       "method": "GET",
       "path": "/",
       "headers": {},
@@ -54,6 +90,7 @@
     },
     {
       "name": "AI Tutor (RAG) - answer query",
+      "summary": "Answers a question using RAG over stored textbook chunks; optionally links the answer to an existing conversation.",
       "method": "POST",
       "path": "/api/v1/ai/query",
       "headers": {
@@ -128,6 +165,7 @@
     },
     {
       "name": "AI Tutor (RAG) - feedback overview",
+      "summary": "Generates a teacher-style answer plan/overview for a topic using retrieved textbook context.",
       "method": "POST",
       "path": "/api/v1/ai/feedback-overview",
       "headers": {
@@ -136,13 +174,11 @@
       },
       "request_schema": {
         "topic": "string (required)",
-        "no_of_chunks": "int (optional, default=5)",
         "book_name": "string (required)",
         "conversation_id": "uuid | null (optional)"
       },
       "request_example": {
         "topic": "Photosynthesis",
-        "no_of_chunks": 5,
         "book_name": "Biology",
         "conversation_id": "00000000-0000-0000-0000-000000000000"
       },
@@ -177,6 +213,7 @@
     },
     {
       "name": "Documents - upload",
+      "summary": "Uploads a textbook chapter (JSON + Markdown) and stores processed chunks in the database/vector store.",
       "method": "POST",
       "path": "/api/v1/documents/upload",
       "headers": {
@@ -204,6 +241,7 @@
     },
     {
       "name": "Documents - list",
+      "summary": "Lists distinct curriculum_book_name values from stored document chunks (adds a derived 'subject' field).",
       "method": "GET",
       "path": "/api/v1/documents/",
       "headers": {
@@ -219,6 +257,7 @@
     },
     {
       "name": "Conversations - create message",
+      "summary": "Creates a message in a conversation (creates a new conversation if conversation_id is null).",
       "method": "POST",
       "path": "/api/v1/conversations/messages",
       "headers": {
@@ -251,7 +290,55 @@
       }
     },
     {
+      "name": "Conversations - ask",
+      "summary": "Saves the user message, calls /api/v1/ai/query, then saves the assistant response in the same conversation.",
+      "method": "POST",
+      "path": "/api/v1/conversations/ask",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "request_schema": {
+        "question": "string (required)",
+        "curriculum_book_name": "\"GOV_SSC_ENGLISH\" | \"GOV_SSC_PHYSICS\" | \"GOV_SSC_CHEMISTRY\" (required)",
+        "conversation_id": "uuid | null (optional)",
+        "title": "string | null (optional)"
+      },
+      "request_example": {
+        "question": "Explain inertia.",
+        "curriculum_book_name": "GOV_SSC_PHYSICS",
+        "conversation_id": null,
+        "title": "Explain inertia."
+      },
+      "response_example": {
+        "conversation_id": "00000000-0000-0000-0000-000000000000",
+        "is_new_conversation": true,
+        "user_message": {
+          "id": "00000000-0000-0000-0000-000000000000",
+          "conversation_id": "00000000-0000-0000-0000-000000000000",
+          "role": "user",
+          "content": "Explain inertia.",
+          "summary": null,
+          "created_at": "2026-05-05T00:00:00Z"
+        },
+        "ai": {
+          "answer": "string | object",
+          "sources": [],
+          "summary": "string | null"
+        },
+        "assistant_message": {
+          "id": "00000000-0000-0000-0000-000000000000",
+          "conversation_id": "00000000-0000-0000-0000-000000000000",
+          "role": "assistant",
+          "content": "{\"example\": \"...\"}",
+          "summary": "Concise summary...",
+          "created_at": "2026-05-05T00:00:01Z"
+        }
+      }
+    },
+    {
       "name": "Conversations - list",
+      "summary": "Lists conversations for the authenticated user.",
       "method": "GET",
       "path": "/api/v1/conversations",
       "headers": {
@@ -272,6 +359,7 @@
     },
     {
       "name": "Conversations - get",
+      "summary": "Fetches a single conversation by id (must belong to the authenticated user).",
       "method": "GET",
       "path": "/api/v1/conversations/{conversation_id}",
       "headers": {
@@ -292,6 +380,7 @@
     },
     {
       "name": "Conversations - list messages",
+      "summary": "Lists messages for a conversation (must belong to the authenticated user).",
       "method": "GET",
       "path": "/api/v1/conversations/{conversation_id}/messages",
       "headers": {
@@ -314,6 +403,7 @@
     },
     {
       "name": "Conversations - delete",
+      "summary": "Deletes a conversation by id (must belong to the authenticated user).",
       "method": "DELETE",
       "path": "/api/v1/conversations/{conversation_id}",
       "headers": {
@@ -330,6 +420,7 @@
     },
     {
       "name": "Conversations - delete message",
+      "summary": "Deletes a single message by id (must belong to the authenticated user).",
       "method": "DELETE",
       "path": "/api/v1/conversations/messages/{message_id}",
       "headers": {
@@ -346,6 +437,7 @@
     },
     {
       "name": "Questions - create assignment",
+      "summary": "Creates a question assignment for a student (teacher assigns a question under an exam).",
       "method": "POST",
       "path": "/api/v1/questions/assignments",
       "headers": {
@@ -370,6 +462,7 @@
     },
     {
       "name": "Questions - list assignments",
+      "summary": "Lists question assignments; optionally filter by student_username (teachers see their assigned questions when not filtering).",
       "method": "GET",
       "path": "/api/v1/questions/assignments",
       "headers": {
@@ -393,6 +486,7 @@
     },
     {
       "name": "Questions - list assignments by exam",
+      "summary": "Lists assignments for a given exam_id and student_username.",
       "method": "GET",
       "path": "/api/v1/questions/assignments/exam/{exam_id}",
       "headers": {
@@ -419,6 +513,7 @@
     },
     {
       "name": "Questions - get questions progress",
+      "summary": "Returns progress summaries across assigned questions for a student in a given curriculum book.",
       "method": "GET",
       "path": "/api/v1/questions/assignments/progress",
       "headers": {
@@ -464,6 +559,7 @@
     },
     {
       "name": "Questions - get assignment with subtopics",
+      "summary": "Fetches an assignment and its subtopics, including progress details where available.",
       "method": "GET",
       "path": "/api/v1/questions/assignments/{question_id}",
       "headers": {
@@ -498,6 +594,7 @@
     },
     {
       "name": "Questions - delete assignment",
+      "summary": "Deletes an assignment by question_id.",
       "method": "DELETE",
       "path": "/api/v1/questions/assignments/{question_id}",
       "headers": {
@@ -514,6 +611,7 @@
     },
     {
       "name": "Questions - create subtopic",
+      "summary": "Creates a subtopic under a question assignment.",
       "method": "POST",
       "path": "/api/v1/questions/subtopics",
       "headers": {
@@ -532,6 +630,7 @@
     },
     {
       "name": "Questions - request subtopic (AI)",
+      "summary": "Generates an AI explanation for a subtopic and creates/links a conversation for the student/teacher context.",
       "method": "POST",
       "path": "/api/v1/questions/subtopics/request",
       "headers": {
@@ -580,6 +679,7 @@
     },
     {
       "name": "Questions - list subtopics by assignment",
+      "summary": "Lists subtopics for a given question assignment.",
       "method": "GET",
       "path": "/api/v1/questions/assignments/{question_id}/subtopics",
       "headers": {
@@ -599,6 +699,7 @@
     },
     {
       "name": "Questions - delete subtopic",
+      "summary": "Deletes a subtopic by question_subtopics_id.",
       "method": "DELETE",
       "path": "/api/v1/questions/subtopics/{question_subtopics_id}",
       "headers": {
@@ -615,6 +716,7 @@
     },
     {
       "name": "Questions - get progress",
+      "summary": "Fetches progress for a specific subtopic (yet_to_start/in_progress/learning/completed).",
       "method": "GET",
       "path": "/api/v1/questions/subtopics/{question_subtopics_id}/progress",
       "headers": {
@@ -633,6 +735,7 @@
     },
     {
       "name": "Questions - update progress",
+      "summary": "Updates progress status for a specific subtopic.",
       "method": "PUT",
       "path": "/api/v1/questions/subtopics/{question_subtopics_id}/progress",
       "headers": {
@@ -654,6 +757,310 @@
         "student_username": "student1",
         "updated_at": "2026-05-05T00:00:00Z"
       }
+    },
+
+    {
+      "name": "AI Tutor (RAG) - answer query (compatibility)",
+      "summary": "Compatibility alias of /api/v1/ai/query (no API key; JWT required).",
+      "method": "POST",
+      "path": "/ai/query",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/ai/query",
+      "request_schema": "same as /api/v1/ai/query",
+      "response_schema": "same as /api/v1/ai/query"
+    },
+    {
+      "name": "AI Tutor (RAG) - feedback overview (compatibility)",
+      "summary": "Compatibility alias of /api/v1/ai/feedback-overview (no API key; JWT required).",
+      "method": "POST",
+      "path": "/ai/feedback-overview",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/ai/feedback-overview",
+      "request_schema": "same as /api/v1/ai/feedback-overview",
+      "response_schema": "same as /api/v1/ai/feedback-overview"
+    },
+    {
+      "name": "Documents - upload (compatibility)",
+      "summary": "Compatibility alias of /api/v1/documents/upload (no API key; no JWT).",
+      "method": "POST",
+      "path": "/documents/upload",
+      "headers": {
+        "Content-Type": "multipart/form-data"
+      },
+      "alias_of": "/api/v1/documents/upload",
+      "request_schema": "same as /api/v1/documents/upload",
+      "response_schema": "same as /api/v1/documents/upload"
+    },
+    {
+      "name": "Documents - list (compatibility)",
+      "summary": "Compatibility alias of /api/v1/documents/ (no API key; no JWT).",
+      "method": "GET",
+      "path": "/documents/",
+      "headers": {},
+      "alias_of": "/api/v1/documents/",
+      "request": null,
+      "response_schema": "same as /api/v1/documents/"
+    },
+    {
+      "name": "Conversations - create message (compatibility)",
+      "summary": "Compatibility alias of /api/v1/conversations/messages (no API key; JWT required).",
+      "method": "POST",
+      "path": "/conversations/messages",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/conversations/messages",
+      "request_schema": "same as /api/v1/conversations/messages",
+      "response_schema": "same as /api/v1/conversations/messages"
+    },
+    {
+      "name": "Conversations - ask (compatibility)",
+      "summary": "Compatibility alias of /api/v1/conversations/ask (no API key; JWT required).",
+      "method": "POST",
+      "path": "/conversations/ask",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/conversations/ask",
+      "request_schema": "same as /api/v1/conversations/ask",
+      "response_schema": "same as /api/v1/conversations/ask"
+    },
+    {
+      "name": "Conversations - list (compatibility)",
+      "summary": "Compatibility alias of /api/v1/conversations (no API key; JWT required).",
+      "method": "GET",
+      "path": "/conversations",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/conversations",
+      "request": null,
+      "response_schema": "same as /api/v1/conversations"
+    },
+    {
+      "name": "Conversations - get (compatibility)",
+      "summary": "Compatibility alias of /api/v1/conversations/{conversation_id} (no API key; JWT required).",
+      "method": "GET",
+      "path": "/conversations/{conversation_id}",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/conversations/{conversation_id}",
+      "path_params": {
+        "conversation_id": "uuid (required)"
+      },
+      "response_schema": "same as /api/v1/conversations/{conversation_id}"
+    },
+    {
+      "name": "Conversations - list messages (compatibility)",
+      "summary": "Compatibility alias of /api/v1/conversations/{conversation_id}/messages (no API key; JWT required).",
+      "method": "GET",
+      "path": "/conversations/{conversation_id}/messages",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/conversations/{conversation_id}/messages",
+      "path_params": {
+        "conversation_id": "uuid (required)"
+      },
+      "response_schema": "same as /api/v1/conversations/{conversation_id}/messages"
+    },
+    {
+      "name": "Conversations - delete (compatibility)",
+      "summary": "Compatibility alias of /api/v1/conversations/{conversation_id} (no API key; JWT required).",
+      "method": "DELETE",
+      "path": "/conversations/{conversation_id}",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/conversations/{conversation_id}",
+      "path_params": {
+        "conversation_id": "uuid (required)"
+      },
+      "response_schema": "same as /api/v1/conversations/{conversation_id}"
+    },
+    {
+      "name": "Conversations - delete message (compatibility)",
+      "summary": "Compatibility alias of /api/v1/conversations/messages/{message_id} (no API key; JWT required).",
+      "method": "DELETE",
+      "path": "/conversations/messages/{message_id}",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/conversations/messages/{message_id}",
+      "path_params": {
+        "message_id": "uuid (required)"
+      },
+      "response_schema": "same as /api/v1/conversations/messages/{message_id}"
+    },
+    {
+      "name": "Questions - create assignment (compatibility)",
+      "summary": "Compatibility alias of /api/v1/questions/assignments (no API key; JWT required).",
+      "method": "POST",
+      "path": "/questions/assignments",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/questions/assignments",
+      "request_schema": "same as /api/v1/questions/assignments",
+      "response_schema": "same as /api/v1/questions/assignments"
+    },
+    {
+      "name": "Questions - list assignments (compatibility)",
+      "summary": "Compatibility alias of /api/v1/questions/assignments (no API key; JWT required).",
+      "method": "GET",
+      "path": "/questions/assignments",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/questions/assignments",
+      "request": null,
+      "response_schema": "same as /api/v1/questions/assignments"
+    },
+    {
+      "name": "Questions - list assignments by exam (compatibility)",
+      "summary": "Compatibility alias of /api/v1/questions/assignments/exam/{exam_id} (no API key; JWT required).",
+      "method": "GET",
+      "path": "/questions/assignments/exam/{exam_id}",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/questions/assignments/exam/{exam_id}",
+      "path_params": {
+        "exam_id": "uuid (required)"
+      },
+      "query_params": {
+        "student_username": "string (required)"
+      },
+      "response_schema": "same as /api/v1/questions/assignments/exam/{exam_id}"
+    },
+    {
+      "name": "Questions - get questions progress (compatibility)",
+      "summary": "Compatibility alias of /api/v1/questions/assignments/progress (no API key; JWT required).",
+      "method": "GET",
+      "path": "/questions/assignments/progress",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/questions/assignments/progress",
+      "query_params": {
+        "studentusername": "string (required)",
+        "book": "\"GOV_SSC_ENGLISH\" | \"GOV_SSC_PHYSICS\" | \"GOV_SSC_CHEMISTRY\" (required)"
+      },
+      "response_schema": "same as /api/v1/questions/assignments/progress"
+    },
+    {
+      "name": "Questions - get assignment with subtopics (compatibility)",
+      "summary": "Compatibility alias of /api/v1/questions/assignments/{question_id} (no API key; JWT required).",
+      "method": "GET",
+      "path": "/questions/assignments/{question_id}",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/questions/assignments/{question_id}",
+      "path_params": {
+        "question_id": "int (required)"
+      },
+      "response_schema": "same as /api/v1/questions/assignments/{question_id}"
+    },
+    {
+      "name": "Questions - delete assignment (compatibility)",
+      "summary": "Compatibility alias of /api/v1/questions/assignments/{question_id} (no API key; JWT required).",
+      "method": "DELETE",
+      "path": "/questions/assignments/{question_id}",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/questions/assignments/{question_id}",
+      "path_params": {
+        "question_id": "int (required)"
+      },
+      "response_schema": "same as /api/v1/questions/assignments/{question_id}"
+    },
+    {
+      "name": "Questions - create subtopic (compatibility)",
+      "summary": "Compatibility alias of /api/v1/questions/subtopics (no API key; JWT required).",
+      "method": "POST",
+      "path": "/questions/subtopics",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/questions/subtopics",
+      "request_schema": "same as /api/v1/questions/subtopics",
+      "response_schema": "same as /api/v1/questions/subtopics"
+    },
+    {
+      "name": "Questions - request subtopic (AI) (compatibility)",
+      "summary": "Compatibility alias of /api/v1/questions/subtopics/request (no API key; JWT required).",
+      "method": "POST",
+      "path": "/questions/subtopics/request",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/questions/subtopics/request",
+      "request_schema": "same as /api/v1/questions/subtopics/request",
+      "response_schema": "same as /api/v1/questions/subtopics/request"
+    },
+    {
+      "name": "Questions - list subtopics by assignment (compatibility)",
+      "summary": "Compatibility alias of /api/v1/questions/assignments/{question_id}/subtopics (no API key; JWT required).",
+      "method": "GET",
+      "path": "/questions/assignments/{question_id}/subtopics",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/questions/assignments/{question_id}/subtopics",
+      "path_params": {
+        "question_id": "int (required)"
+      },
+      "response_schema": "same as /api/v1/questions/assignments/{question_id}/subtopics"
+    },
+    {
+      "name": "Questions - delete subtopic (compatibility)",
+      "summary": "Compatibility alias of /api/v1/questions/subtopics/{question_subtopics_id} (no API key; JWT required).",
+      "method": "DELETE",
+      "path": "/questions/subtopics/{question_subtopics_id}",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/questions/subtopics/{question_subtopics_id}",
+      "path_params": {
+        "question_subtopics_id": "int (required)"
+      },
+      "response_schema": "same as /api/v1/questions/subtopics/{question_subtopics_id}"
+    },
+    {
+      "name": "Questions - get progress (compatibility)",
+      "summary": "Compatibility alias of /api/v1/questions/subtopics/{question_subtopics_id}/progress (no API key; JWT required).",
+      "method": "GET",
+      "path": "/questions/subtopics/{question_subtopics_id}/progress",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/questions/subtopics/{question_subtopics_id}/progress",
+      "path_params": {
+        "question_subtopics_id": "int (required)"
+      },
+      "response_schema": "same as /api/v1/questions/subtopics/{question_subtopics_id}/progress"
+    },
+    {
+      "name": "Questions - update progress (compatibility)",
+      "summary": "Compatibility alias of /api/v1/questions/subtopics/{question_subtopics_id}/progress (no API key; JWT required).",
+      "method": "PUT",
+      "path": "/questions/subtopics/{question_subtopics_id}/progress",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/questions/subtopics/{question_subtopics_id}/progress",
+      "path_params": {
+        "question_subtopics_id": "int (required)"
+      },
+      "request_schema": "same as /api/v1/questions/subtopics/{question_subtopics_id}/progress",
+      "response_schema": "same as /api/v1/questions/subtopics/{question_subtopics_id}/progress"
     }
   ]
 }
