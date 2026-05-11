@@ -165,9 +165,9 @@
     },
     {
       "name": "AI Tutor (RAG) - feedback overview",
-      "summary": "Generates a teacher-style answer plan/overview for a topic using retrieved textbook context.",
+      "summary": "Generates a teacher-style answer plan/overview for a question assignment (uses question_name as topic) using retrieved textbook context.",
       "method": "POST",
-      "path": "/api/v1/ai/feedback-overview",
+      "path": "/api/v1/ai/feedback-rag",
       "headers": {
         "X-API-KEY": "<server-issued-api-key>",
         "Authorization": "Bearer <jwt>"
@@ -348,7 +348,7 @@
     },
     {
       "name": "Conversations - feedback overview",
-      "summary": "Saves the user message, calls /api/v1/ai/feedback-overview, then saves the assistant response in the same conversation.",
+      "summary": "Saves the user message (derived from the question assignment), calls /api/v1/ai/feedback-rag, saves the assistant response, and sets progress status to in_progress for each generated subtopic.",
       "method": "POST",
       "path": "/api/v1/conversations/feedback-overview",
       "headers": {
@@ -883,15 +883,15 @@
     },
     {
       "name": "AI Tutor (RAG) - feedback overview (compatibility)",
-      "summary": "Compatibility alias of /api/v1/ai/feedback-overview (no API key; JWT required).",
+      "summary": "Compatibility alias of /api/v1/ai/feedback-rag (no API key; JWT required).",
       "method": "POST",
-      "path": "/ai/feedback-overview",
+      "path": "/ai/feedback-rag",
       "headers": {
         "Authorization": "Bearer <jwt>"
       },
-      "alias_of": "/api/v1/ai/feedback-overview",
-      "request_schema": "same as /api/v1/ai/feedback-overview",
-      "response_schema": "same as /api/v1/ai/feedback-overview"
+      "alias_of": "/api/v1/ai/feedback-rag",
+      "request_schema": "same as /api/v1/ai/feedback-rag",
+      "response_schema": "same as /api/v1/ai/feedback-rag"
     },
     {
       "name": "Documents - upload (compatibility)",

@@ -223,6 +223,172 @@ class ConversationStore:
                 conversation = cur.fetchone()
                 return dict(conversation) if conversation else None
 
+    def create_feedback_overview_interaction(
+        self,
+        username: str,
+        conversation_id: UUID,
+        curriculum_book_name: str,
+        user_content: str,
+        user_title: Optional[str],
+        assistant_content: str,
+        assistant_title: Optional[str],
+        question_id: Optional[int],
+        question_subtopics_id: Optional[int],
+        subtopic_names: List[str],
+    ) -> Tuple[dict, dict, bool]:
+        with db_session.get_connection() as conn:
+            try:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    is_new_conversation = False
+
+                    cur.execute(
+                        """
+                        SELECT id FROM conversations
+                        WHERE id = %s AND username = %s
+                        """,
+                        (str(conversation_id), username),
+                    )
+                    existing_convo = cur.fetchone()
+
+                    if not existing_convo:
+                        cur.execute(
+                            """
+                            SELECT COUNT(*) as count FROM conversations WHERE username = %s
+                            """,
+                            (username,),
+                        )
+                        count_result = cur.fetchone()
+                        convo_count = count_result["count"]
+
+                        if convo_count >= MAX_CONVERSATIONS_PER_USER:
+                            cur.execute(
+                                """
+                                SELECT id FROM conversations
+                                WHERE username = %s
+                                ORDER BY created_at ASC
+                                LIMIT 1
+                                """,
+                                (username,),
+                            )
+                            oldest = cur.fetchone()
+                            if oldest:
+                                cur.execute(
+                                    "DELETE FROM conversations WHERE id = %s",
+                                    (oldest["id"],),
+                                )
+
+                        cur.execute(
+                            """
+                            INSERT INTO conversations (
+                                id,
+                                username,
+                                curriculum_book_name,
+                                title,
+                                question_id,
+                                question_subtopics_id
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                            """,
+                            (
+                                str(conversation_id),
+                                username,
+                                curriculum_book_name,
+                                user_title,
+                                question_id,
+                                question_subtopics_id,
+                            ),
+                        )
+                        is_new_conversation = True
+                    else:
+                        cur.execute(
+                            """
+                            UPDATE conversations
+                            SET
+                                question_id = COALESCE(conversations.question_id, %s),
+                                question_subtopics_id = COALESCE(conversations.question_subtopics_id, %s)
+                            WHERE id = %s AND username = %s
+                            """,
+                            (question_id, question_subtopics_id, str(conversation_id), username),
+                        )
+
+                    cur.execute(
+                        """
+                        INSERT INTO messages (conversation_id, role, content, summary)
+                        VALUES (%s, %s, %s, %s)
+                        RETURNING id, conversation_id, role, content, summary, created_at
+                        """,
+                        (str(conversation_id), "user", user_content, None),
+                    )
+                    user_message = cur.fetchone()
+
+                    cur.execute(
+                        """
+                        INSERT INTO messages (conversation_id, role, content, summary)
+                        VALUES (%s, %s, %s, %s)
+                        RETURNING id, conversation_id, role, content, summary, created_at
+                        """,
+                        (str(conversation_id), "assistant", assistant_content, None),
+                    )
+                    assistant_message = cur.fetchone()
+
+                    if question_id is not None and subtopic_names:
+                        cur.execute(
+                            """
+                            SELECT student_username
+                            FROM question_assignments
+                            WHERE question_id = %s
+                            """,
+                            (question_id,),
+                        )
+                        assignment = cur.fetchone()
+                        student_username = (assignment or {}).get("student_username")
+                        if student_username:
+                            for raw_name in subtopic_names:
+                                name = (raw_name or "").strip()
+                                if not name:
+                                    continue
+
+                                cur.execute(
+                                    """
+                                    INSERT INTO question_subtopics (question_id, subtopic_name)
+                                    VALUES (%s, %s)
+                                    ON CONFLICT (question_id, subtopic_name) DO NOTHING
+                                    RETURNING question_subtopics_id
+                                    """,
+                                    (question_id, name),
+                                )
+                                subtopic_row = cur.fetchone()
+                                if not subtopic_row:
+                                    cur.execute(
+                                        """
+                                        SELECT question_subtopics_id
+                                        FROM question_subtopics
+                                        WHERE question_id = %s AND subtopic_name = %s
+                                        """,
+                                        (question_id, name),
+                                    )
+                                    subtopic_row = cur.fetchone()
+
+                                subtopic_id = (subtopic_row or {}).get("question_subtopics_id")
+                                if not subtopic_id:
+                                    continue
+
+                                cur.execute(
+                                    """
+                                    INSERT INTO question_progress (question_subtopics_id, student_username, status)
+                                    VALUES (%s, %s, %s)
+                                    ON CONFLICT (question_subtopics_id) DO UPDATE
+                                    SET status = EXCLUDED.status, updated_at = CURRENT_TIMESTAMP
+                                    """,
+                                    (subtopic_id, student_username, "in_progress"),
+                                )
+
+                    conn.commit()
+                    return dict(user_message), dict(assistant_message), is_new_conversation
+            except Exception:
+                conn.rollback()
+                raise
+
     def get_messages(self, conversation_id: UUID, username: str) -> List[dict]:
         """Get all messages for a conversation, ensuring user owns the conversation."""
         with db_session.get_connection() as conn:

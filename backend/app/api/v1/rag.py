@@ -25,7 +25,7 @@ async def ask_question(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/feedback-overview", response_model=FeedbackOverviewAnswer)
+@router.post("/feedback-rag", response_model=FeedbackOverviewAnswer)
 async def generate_feedback_overview(
     query: FeedbackOverviewQuery,
     username: str = Depends(get_current_username),

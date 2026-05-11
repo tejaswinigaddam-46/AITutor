@@ -147,20 +147,7 @@ async def feedback_overview_and_save(
             raise HTTPException(status_code=400, detail="curriculum_book_name does not match question assignment")
 
         user_title = request.title or topic[:30]
-        user_message, is_new_conversation = await conversation_service.create_message(
-            username=username,
-            conversation_id=request.conversation_id,
-            role="user",
-            content=topic,
-            curriculum_book_name=request.curriculum_book_name,
-            title=user_title,
-            question_id=request.question_id,
-            question_subtopics_id=request.question_subtopics_id,
-        )
-
-        conversation_id_to_use = user_message.get("conversation_id")
-        if isinstance(conversation_id_to_use, str):
-            conversation_id_to_use = UUID(conversation_id_to_use)
+        conversation_id_to_use = request.conversation_id
 
         ai_result = await teacher_feedback_service.generate_feedback_overview(
             question_id=request.question_id,
@@ -185,17 +172,66 @@ async def feedback_overview_and_save(
         if assistant_title is not None:
             assistant_title = str(assistant_title)[:50]
 
-        assistant_message, _ = await conversation_service.create_message(
+        if isinstance(ai_answer, BaseModel):
+            answer_plan = getattr(ai_answer, "answer_plan", None)
+            subtopic_names = [
+                str(getattr(item, "subtopic", "") or "").strip()
+                for item in (answer_plan or [])
+                if str(getattr(item, "subtopic", "") or "").strip()
+            ]
+        elif isinstance(ai_answer, dict):
+            answer_plan = ai_answer.get("answer_plan") or []
+            subtopic_names = [
+                str((item or {}).get("subtopic") or "").strip()
+                for item in answer_plan
+                if isinstance(item, dict) and str(item.get("subtopic") or "").strip()
+            ]
+        else:
+            subtopic_names = []
+
+        (
+            conversation_id_to_use,
+            user_message,
+            assistant_message,
+            is_new_conversation,
+        ) = conversation_service.create_feedback_overview_interaction(
             username=username,
             conversation_id=conversation_id_to_use,
-            role="assistant",
-            content=assistant_content,
-            curriculum_book_name=request.curriculum_book_name,
-            summary=None,
-            title=assistant_title,
+            curriculum_book_name=request_book_name,
+            user_content=topic,
+            user_title=user_title,
+            assistant_content=assistant_content,
+            assistant_title=assistant_title,
             question_id=request.question_id,
             question_subtopics_id=request.question_subtopics_id,
+            subtopic_names=subtopic_names,
         )
+
+        try:
+            overview_subtopic = question_store.upsert_question_subtopic_conversation_id(
+                question_id=request.question_id,
+                subtopic_name="Overview",
+                conversation_id=str(conversation_id_to_use),
+            )
+            overview_subtopic_id = overview_subtopic.get("question_subtopics_id")
+            if overview_subtopic_id:
+                updated = question_store.update_question_progress(
+                    question_subtopics_id=overview_subtopic_id,
+                    status="yet_to_start",
+                )
+                if not updated:
+                    student_username = assignment.get("student_username") or username
+                    question_store.create_question_progress(
+                        question_subtopics_id=overview_subtopic_id,
+                        student_username=student_username,
+                        status="yet_to_start",
+                    )
+        except Exception:
+            logger.exception(
+                "Failed setting Overview subtopic progress for question_id=%s conversation_id=%s",
+                request.question_id,
+                conversation_id_to_use,
+            )
 
         return {
             "conversation_id": conversation_id_to_use,

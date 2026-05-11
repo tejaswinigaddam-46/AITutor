@@ -70,6 +70,36 @@ class ConversationService:
             question_subtopics_id=question_subtopics_id,
         )
 
+    def create_feedback_overview_interaction(
+        self,
+        username: str,
+        conversation_id: Optional[UUID],
+        curriculum_book_name: str,
+        user_content: str,
+        user_title: Optional[str],
+        assistant_content: str,
+        assistant_title: Optional[str],
+        question_id: Optional[int],
+        question_subtopics_id: Optional[int],
+        subtopic_names: List[str],
+    ) -> Tuple[UUID, dict, dict, bool]:
+        if not conversation_id:
+            conversation_id = uuid4()
+
+        user_message, assistant_message, is_new = conversation_store.create_feedback_overview_interaction(
+            username=username,
+            conversation_id=conversation_id,
+            curriculum_book_name=curriculum_book_name,
+            user_content=user_content,
+            user_title=user_title,
+            assistant_content=assistant_content,
+            assistant_title=assistant_title,
+            question_id=question_id,
+            question_subtopics_id=question_subtopics_id,
+            subtopic_names=subtopic_names,
+        )
+        return conversation_id, user_message, assistant_message, is_new
+
     def get_messages(self, conversation_id: UUID, username: str) -> List[dict]:
         """Get all messages for a conversation."""
         return conversation_store.get_messages(conversation_id, username)
