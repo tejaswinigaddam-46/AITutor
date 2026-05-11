@@ -3,7 +3,7 @@ from uuid import UUID
 from datetime import datetime
 from typing import List, Optional
 from enum import Enum
-from app.schemas.rag import Answer
+from app.schemas.rag import Answer, FeedbackOverviewAnswer
 
 class CurriculumBookEnum(str, Enum):
     GOV_SSC_ENGLISH = "GOV_SSC_ENGLISH"
@@ -23,6 +23,8 @@ class MessageCreate(MessageBase):
     curriculum_book_name: CurriculumBookEnum
     title: Optional[str] = None
     summary: Optional[str] = None
+    question_id: Optional[int] = None
+    question_subtopics_id: Optional[int] = None
 
 class MessageRead(MessageBase):
     id: UUID
@@ -37,6 +39,8 @@ class ConversationBase(BaseModel):
     username: str
     curriculum_book_name: CurriculumBookEnum
     title: Optional[str] = None
+    question_id: Optional[int] = None
+    question_subtopics_id: Optional[int] = None
 
 class ConversationRead(ConversationBase):
     id: UUID
@@ -55,6 +59,8 @@ class ConversationAskRequest(BaseModel):
     curriculum_book_name: CurriculumBookEnum
     conversation_id: Optional[UUID] = None
     title: Optional[str] = None
+    question_id: Optional[int] = None
+    question_subtopics_id: Optional[int] = None
 
 
 class ConversationAskResponse(BaseModel):
@@ -62,4 +68,21 @@ class ConversationAskResponse(BaseModel):
     is_new_conversation: bool
     user_message: MessageRead
     ai: Answer
+    assistant_message: MessageRead
+
+
+class ConversationFeedbackOverviewRequest(BaseModel):
+    question_id: int = Field(..., ge=1)
+    curriculum_book_name: CurriculumBookEnum
+    conversation_id: Optional[UUID] = None
+    title: Optional[str] = None
+    no_of_chunks: int = 8
+    question_subtopics_id: Optional[int] = None
+
+
+class ConversationFeedbackOverviewResponse(BaseModel):
+    conversation_id: UUID
+    is_new_conversation: bool
+    user_message: MessageRead
+    ai: FeedbackOverviewAnswer
     assistant_message: MessageRead

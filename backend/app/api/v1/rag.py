@@ -32,8 +32,8 @@ async def generate_feedback_overview(
 ):
     try:
         result = await teacher_feedback_service.generate_feedback_overview(
-            topic=query.topic,
-            no_of_chunks=8,
+            question_id=query.question_id,
+            no_of_chunks=query.no_of_chunks,
             book_name=query.book_name,
             conversation_id=query.conversation_id,
             username=username,

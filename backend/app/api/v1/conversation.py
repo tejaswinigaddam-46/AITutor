@@ -10,9 +10,13 @@ from app.schemas.conversation import (
     ConversationRead,
     ConversationAskRequest,
     ConversationAskResponse,
+    ConversationFeedbackOverviewRequest,
+    ConversationFeedbackOverviewResponse,
 )
 from app.modules.orchestration.conversation_service import conversation_service
 from app.modules.orchestration.rag_service import rag_service
+from app.modules.orchestration.teacher_feedback_service import teacher_feedback_service
+from app.modules.persistence.question_store import question_store
 from app.core.security import get_current_username
 
 logger = logging.getLogger(__name__)
@@ -31,7 +35,9 @@ async def create_message(
             content=message_data.content,
             curriculum_book_name=message_data.curriculum_book_name,
             summary=message_data.summary,
-            title=message_data.title
+            title=message_data.title,
+            question_id=message_data.question_id,
+            question_subtopics_id=message_data.question_subtopics_id,
         )
         logger.info(f"Created message: {message}")
         return message
@@ -57,6 +63,8 @@ async def ask_and_save(
             content=request.question,
             curriculum_book_name=request.curriculum_book_name,
             title=user_title,
+            question_id=request.question_id,
+            question_subtopics_id=request.question_subtopics_id,
         )
 
         conversation_id_to_use = user_message.get("conversation_id")
@@ -100,6 +108,8 @@ async def ask_and_save(
             curriculum_book_name=request.curriculum_book_name,
             summary=ai_summary,
             title=assistant_title,
+            question_id=request.question_id,
+            question_subtopics_id=request.question_subtopics_id,
         )
 
         return {
@@ -117,6 +127,91 @@ async def ask_and_save(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/feedback-overview", response_model=ConversationFeedbackOverviewResponse)
+async def feedback_overview_and_save(
+    request: ConversationFeedbackOverviewRequest,
+    username: str = Depends(get_current_username),
+):
+    try:
+        assignment = question_store.get_question_assignment(request.question_id)
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Question assignment not found")
+
+        topic = str(assignment.get("question_name") or "").strip()
+        if not topic:
+            raise HTTPException(status_code=400, detail="Question assignment has empty question_name")
+
+        assignment_book_name = str(assignment.get("curriculum_book_name") or "").strip()
+        request_book_name = getattr(request.curriculum_book_name, "value", request.curriculum_book_name)
+        if assignment_book_name and request_book_name and str(assignment_book_name) != str(request_book_name):
+            raise HTTPException(status_code=400, detail="curriculum_book_name does not match question assignment")
+
+        user_title = request.title or topic[:30]
+        user_message, is_new_conversation = await conversation_service.create_message(
+            username=username,
+            conversation_id=request.conversation_id,
+            role="user",
+            content=topic,
+            curriculum_book_name=request.curriculum_book_name,
+            title=user_title,
+            question_id=request.question_id,
+            question_subtopics_id=request.question_subtopics_id,
+        )
+
+        conversation_id_to_use = user_message.get("conversation_id")
+        if isinstance(conversation_id_to_use, str):
+            conversation_id_to_use = UUID(conversation_id_to_use)
+
+        ai_result = await teacher_feedback_service.generate_feedback_overview(
+            question_id=request.question_id,
+            no_of_chunks=request.no_of_chunks,
+            book_name=getattr(request.curriculum_book_name, "value", request.curriculum_book_name),
+            conversation_id=conversation_id_to_use,
+            username=username,
+        )
+
+        ai_answer = ai_result.get("answer")
+        assistant_title = None
+        if isinstance(ai_answer, BaseModel):
+            assistant_content = ai_answer.model_dump_json()
+            answer_plan = getattr(ai_answer, "answer_plan", None)
+            if answer_plan and len(answer_plan) > 0:
+                assistant_title = getattr(answer_plan[0], "subtopic", None)
+        elif isinstance(ai_answer, (dict, list)):
+            assistant_content = json.dumps(ai_answer, ensure_ascii=False)
+        else:
+            assistant_content = "" if ai_answer is None else str(ai_answer)
+
+        if assistant_title is not None:
+            assistant_title = str(assistant_title)[:50]
+
+        assistant_message, _ = await conversation_service.create_message(
+            username=username,
+            conversation_id=conversation_id_to_use,
+            role="assistant",
+            content=assistant_content,
+            curriculum_book_name=request.curriculum_book_name,
+            summary=None,
+            title=assistant_title,
+            question_id=request.question_id,
+            question_subtopics_id=request.question_subtopics_id,
+        )
+
+        return {
+            "conversation_id": conversation_id_to_use,
+            "is_new_conversation": is_new_conversation,
+            "user_message": user_message,
+            "ai": ai_result,
+            "assistant_message": assistant_message,
+        }
+    except ValueError as e:
+        logger.warning(f"Error creating feedback overview conversation: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Internal server error in feedback overview conversation: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("", response_model=List[ConversationRead])
 async def list_conversations(username: str = Depends(get_current_username)):
     try:
@@ -126,6 +221,31 @@ async def list_conversations(username: str = Depends(get_current_username)):
     except Exception as e:
         logger.error(f"Error listing conversations: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/by-question/{question_id}", response_model=ConversationRead)
+async def get_conversation_by_question(
+    question_id: int,
+    username: str = Depends(get_current_username),
+):
+    convo = conversation_service.get_conversation_by_question(username=username, question_id=question_id)
+    logger.info(f"Get conversation by question_id={question_id}: {convo}")
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return convo
+
+@router.get("/by-question-subtopic/{question_subtopics_id}", response_model=ConversationRead)
+async def get_conversation_by_question_subtopic(
+    question_subtopics_id: int,
+    username: str = Depends(get_current_username),
+):
+    convo = conversation_service.get_conversation_by_question_subtopic(
+        username=username,
+        question_subtopics_id=question_subtopics_id,
+    )
+    logger.info(f"Get conversation by question_subtopics_id={question_subtopics_id}: {convo}")
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return convo
 
 @router.get("/{conversation_id}", response_model=ConversationRead)
 async def get_conversation(

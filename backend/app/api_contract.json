@@ -173,13 +173,15 @@
         "Authorization": "Bearer <jwt>"
       },
       "request_schema": {
-        "topic": "string (required)",
+        "question_id": "int (required)",
+        "no_of_chunks": "int (optional, default 5)",
         "book_name": "string (required)",
         "conversation_id": "uuid | null (optional)"
       },
       "request_example": {
-        "topic": "Photosynthesis",
-        "book_name": "Biology",
+        "question_id": 1,
+        "no_of_chunks": 5,
+        "book_name": "GOV_SSC_PHYSICS",
         "conversation_id": "00000000-0000-0000-0000-000000000000"
       },
       "response_schema": {
@@ -188,21 +190,21 @@
       },
       "response_example": {
         "answer": {
-          "topic": "Photosynthesis",
+          "topic": "Newton's Laws",
           "answer_plan": [
-            { "subtopic": "Definition and purpose" },
-            { "subtopic": "Chloroplast structure and role of chlorophyll" },
-            { "subtopic": "Light reaction vs dark reaction (Calvin cycle)" }
+            { "subtopic": "First Law (inertia) - definition and examples" },
+            { "subtopic": "Second Law (F = m·a) - explanation and applications" },
+            { "subtopic": "Third Law - action and reaction with examples" }
           ]
         },
         "sources": [
           {
             "id": 456,
             "curriculum_book_name": "GOV_SSC_CHEMISTRY",
-            "book_name": "Biology",
-            "chapter": "Plant Processes",
+            "book_name": "Physics",
+            "chapter": "Force and Laws of Motion",
             "page_number": 88,
-            "content": "Photosynthesis is ...",
+            "content": "Newton's laws of motion describe the relationship between forces and motion ...",
             "distance": 0.19,
             "chunk_metadata": {
               "chunk_index": 1
@@ -270,7 +272,9 @@
         "conversation_id": "uuid | null (optional)",
         "curriculum_book_name": "\"GOV_SSC_ENGLISH\" | \"GOV_SSC_PHYSICS\" | \"GOV_SSC_CHEMISTRY\" (required)",
         "title": "string | null (optional)",
-        "summary": "string | null (optional)"
+        "summary": "string | null (optional)",
+        "question_id": "int | null (optional)",
+        "question_subtopics_id": "int | null (optional)"
       },
       "request_example": {
         "role": "user",
@@ -278,7 +282,9 @@
         "conversation_id": null,
         "curriculum_book_name": "GOV_SSC_PHYSICS",
         "title": "Inertia",
-        "summary": null
+        "summary": null,
+        "question_id": null,
+        "question_subtopics_id": null
       },
       "response_example": {
         "id": "00000000-0000-0000-0000-000000000000",
@@ -302,13 +308,17 @@
         "question": "string (required)",
         "curriculum_book_name": "\"GOV_SSC_ENGLISH\" | \"GOV_SSC_PHYSICS\" | \"GOV_SSC_CHEMISTRY\" (required)",
         "conversation_id": "uuid | null (optional)",
-        "title": "string | null (optional)"
+        "title": "string | null (optional)",
+        "question_id": "int | null (optional)",
+        "question_subtopics_id": "int | null (optional)"
       },
       "request_example": {
         "question": "Explain inertia.",
         "curriculum_book_name": "GOV_SSC_PHYSICS",
         "conversation_id": null,
-        "title": "Explain inertia."
+        "title": "Explain inertia.",
+        "question_id": null,
+        "question_subtopics_id": null
       },
       "response_example": {
         "conversation_id": "00000000-0000-0000-0000-000000000000",
@@ -337,6 +347,56 @@
       }
     },
     {
+      "name": "Conversations - feedback overview",
+      "summary": "Saves the user message, calls /api/v1/ai/feedback-overview, then saves the assistant response in the same conversation.",
+      "method": "POST",
+      "path": "/api/v1/conversations/feedback-overview",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "request_schema": {
+        "question_id": "int (required)",
+        "curriculum_book_name": "\"GOV_SSC_ENGLISH\" | \"GOV_SSC_PHYSICS\" | \"GOV_SSC_CHEMISTRY\" (required)",
+        "conversation_id": "uuid | null (optional)",
+        "title": "string | null (optional)",
+        "no_of_chunks": "int (optional, default 8)",
+        "question_subtopics_id": "int | null (optional)"
+      },
+      "request_example": {
+        "question_id": 1,
+        "curriculum_book_name": "GOV_SSC_PHYSICS",
+        "conversation_id": null,
+        "title": "Force and Laws of Motion",
+        "no_of_chunks": 8,
+        "question_subtopics_id": null
+      },
+      "response_example": {
+        "conversation_id": "00000000-0000-0000-0000-000000000000",
+        "is_new_conversation": true,
+        "user_message": {
+          "id": "00000000-0000-0000-0000-000000000000",
+          "conversation_id": "00000000-0000-0000-0000-000000000000",
+          "role": "user",
+          "content": "Force and Laws of Motion",
+          "summary": null,
+          "created_at": "2026-05-05T00:00:00Z"
+        },
+        "ai": {
+          "answer": "string | object",
+          "sources": []
+        },
+        "assistant_message": {
+          "id": "00000000-0000-0000-0000-000000000000",
+          "conversation_id": "00000000-0000-0000-0000-000000000000",
+          "role": "assistant",
+          "content": "{\"topic\": \"...\", \"answer_plan\": [{\"subtopic\": \"...\"}]}",
+          "summary": null,
+          "created_at": "2026-05-05T00:00:01Z"
+        }
+      }
+    },
+    {
       "name": "Conversations - list",
       "summary": "Lists conversations for the authenticated user.",
       "method": "GET",
@@ -352,6 +412,8 @@
           "username": "alice",
           "curriculum_book_name": "GOV_SSC_PHYSICS",
           "title": "Inertia",
+          "question_id": null,
+          "question_subtopics_id": null,
           "created_at": "2026-05-05T00:00:00Z",
           "updated_at": "2026-05-05T00:00:00Z"
         }
@@ -374,6 +436,54 @@
         "username": "alice",
         "curriculum_book_name": "GOV_SSC_PHYSICS",
         "title": "Inertia",
+        "question_id": null,
+        "question_subtopics_id": null,
+        "created_at": "2026-05-05T00:00:00Z",
+        "updated_at": "2026-05-05T00:00:00Z"
+      }
+    },
+    {
+      "name": "Conversations - get by question",
+      "summary": "Fetches the most recently updated conversation for the authenticated user by question_id.",
+      "method": "GET",
+      "path": "/api/v1/conversations/by-question/{question_id}",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "question_id": "int (required)"
+      },
+      "response_example": {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "username": "alice",
+        "curriculum_book_name": "GOV_SSC_PHYSICS",
+        "title": "Inertia",
+        "question_id": 1,
+        "question_subtopics_id": null,
+        "created_at": "2026-05-05T00:00:00Z",
+        "updated_at": "2026-05-05T00:00:00Z"
+      }
+    },
+    {
+      "name": "Conversations - get by question subtopic",
+      "summary": "Fetches the most recently updated conversation for the authenticated user by question_subtopics_id.",
+      "method": "GET",
+      "path": "/api/v1/conversations/by-question-subtopic/{question_subtopics_id}",
+      "headers": {
+        "X-API-KEY": "<server-issued-api-key>",
+        "Authorization": "Bearer <jwt>"
+      },
+      "path_params": {
+        "question_subtopics_id": "int (required)"
+      },
+      "response_example": {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "username": "alice",
+        "curriculum_book_name": "GOV_SSC_PHYSICS",
+        "title": "Second law",
+        "question_id": 1,
+        "question_subtopics_id": 11,
         "created_at": "2026-05-05T00:00:00Z",
         "updated_at": "2026-05-05T00:00:00Z"
       }
@@ -830,6 +940,18 @@
       "response_schema": "same as /api/v1/conversations/ask"
     },
     {
+      "name": "Conversations - feedback overview (compatibility)",
+      "summary": "Compatibility alias of /api/v1/conversations/feedback-overview (no API key; JWT required).",
+      "method": "POST",
+      "path": "/conversations/feedback-overview",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/conversations/feedback-overview",
+      "request_schema": "same as /api/v1/conversations/feedback-overview",
+      "response_schema": "same as /api/v1/conversations/feedback-overview"
+    },
+    {
       "name": "Conversations - list (compatibility)",
       "summary": "Compatibility alias of /api/v1/conversations (no API key; JWT required).",
       "method": "GET",
@@ -854,6 +976,34 @@
         "conversation_id": "uuid (required)"
       },
       "response_schema": "same as /api/v1/conversations/{conversation_id}"
+    },
+    {
+      "name": "Conversations - get by question (compatibility)",
+      "summary": "Compatibility alias of /api/v1/conversations/by-question/{question_id} (no API key; JWT required).",
+      "method": "GET",
+      "path": "/conversations/by-question/{question_id}",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/conversations/by-question/{question_id}",
+      "path_params": {
+        "question_id": "int (required)"
+      },
+      "response_schema": "same as /api/v1/conversations/by-question/{question_id}"
+    },
+    {
+      "name": "Conversations - get by question subtopic (compatibility)",
+      "summary": "Compatibility alias of /api/v1/conversations/by-question-subtopic/{question_subtopics_id} (no API key; JWT required).",
+      "method": "GET",
+      "path": "/conversations/by-question-subtopic/{question_subtopics_id}",
+      "headers": {
+        "Authorization": "Bearer <jwt>"
+      },
+      "alias_of": "/api/v1/conversations/by-question-subtopic/{question_subtopics_id}",
+      "path_params": {
+        "question_subtopics_id": "int (required)"
+      },
+      "response_schema": "same as /api/v1/conversations/by-question-subtopic/{question_subtopics_id}"
     },
     {
       "name": "Conversations - list messages (compatibility)",

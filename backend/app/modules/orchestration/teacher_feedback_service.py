@@ -90,26 +90,10 @@ class TeacherFeedbackService:
     def _persist_feedback_overview_subtopics(
         self,
         result: dict,
-        topic: str,
-        book_name: Optional[str],
-        username: Optional[str],
+        question_id: int,
     ) -> None:
         answer = result.get("answer")
         if not isinstance(answer, TeacherFeedbackOverviewResponse):
-            return
-
-        question_id = self._resolve_question_id(
-            topic=topic,
-            student_username=username,
-            book_name=book_name,
-        )
-        if not question_id:
-            logger.warning(
-                "Skipping subtopic persistence: no matching question assignment for topic=%s student=%s book=%s",
-                topic,
-                username,
-                book_name,
-            )
             return
 
         subtopic_names = [
@@ -134,17 +118,31 @@ class TeacherFeedbackService:
 
     async def generate_feedback_overview(
         self,
-        topic: str,
+        question_id: int,
         no_of_chunks: int = 5,
         book_name: Optional[str] = None,
         retries: int = 2,
         conversation_id: Optional[UUID] = None,
         username: Optional[str] = None,
     ) -> dict:
+        assignment = question_store.get_question_assignment(question_id)
+        if not assignment:
+            raise ValueError(f"Question assignment with id {question_id} not found")
+
+        topic = str(assignment.get("question_name") or "").strip()
+        if not topic:
+            raise ValueError(f"Question assignment with id {question_id} has empty question_name")
+
+        assignment_book_name = str(assignment.get("curriculum_book_name") or "").strip()
+        if book_name and str(book_name) != assignment_book_name:
+            raise ValueError(
+                f"book_name '{book_name}' does not match assignment curriculum_book_name '{assignment_book_name}'"
+            )
+
         retrieval = await rag_service.retrieve_context(
             question=topic,
             limit=no_of_chunks,
-            book_name=book_name,
+            book_name=assignment_book_name or book_name,
             conversation_id=conversation_id,
             username=username,
         )
@@ -187,9 +185,7 @@ class TeacherFeedbackService:
         )
         self._persist_feedback_overview_subtopics(
             result=result,
-            topic=topic,
-            book_name=book_name,
-            username=username,
+            question_id=question_id,
         )
         return result
 

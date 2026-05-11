@@ -12,7 +12,9 @@ class ConversationService:
         content: str,
         curriculum_book_name: str,
         summary: Optional[str] = None,
-        title: Optional[str] = None
+        title: Optional[str] = None,
+        question_id: Optional[int] = None,
+        question_subtopics_id: Optional[int] = None,
     ) -> Tuple[dict, bool]:
         """
         Business logic for creating a message.
@@ -38,7 +40,9 @@ class ConversationService:
             content=content,
             curriculum_book_name=curriculum_book_name,
             summary=summary,
-            title=title
+            title=title,
+            question_id=question_id,
+            question_subtopics_id=question_subtopics_id,
         )
 
     def update_message_summary(self, message_id: UUID, username: str, summary: str) -> bool:
@@ -52,6 +56,19 @@ class ConversationService:
     def get_conversation(self, conversation_id: UUID, username: str) -> Optional[dict]:
         """Get a specific conversation."""
         return conversation_store.get_conversation(conversation_id, username)
+
+    def get_conversation_by_question(self, username: str, question_id: int) -> Optional[dict]:
+        return conversation_store.get_conversation_by_question(username=username, question_id=question_id)
+
+    def get_conversation_by_question_subtopic(
+        self,
+        username: str,
+        question_subtopics_id: int,
+    ) -> Optional[dict]:
+        return conversation_store.get_conversation_by_question_subtopic(
+            username=username,
+            question_subtopics_id=question_subtopics_id,
+        )
 
     def get_messages(self, conversation_id: UUID, username: str) -> List[dict]:
         """Get all messages for a conversation."""

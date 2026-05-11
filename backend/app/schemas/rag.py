@@ -63,7 +63,7 @@ class TeacherFeedbackOverviewResponse(BaseModel):
 
 
 class FeedbackOverviewQuery(BaseModel):
-    topic: str
+    question_id: int = Field(..., ge=1)
     no_of_chunks: int = 5
     book_name: str
     conversation_id: Optional[UUID] = None

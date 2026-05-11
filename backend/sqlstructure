@@ -40,6 +40,8 @@ CREATE TABLE conversations (
     username  VARCHAR(100) NOT NULL,
     curriculum_book_name curriculum_book_enum NOT NULL,
     title TEXT,
+    question_id INT references question_assignments(question_id),
+    question_subtopics_id int references question_subtopics(question_subtopics_id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

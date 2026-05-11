@@ -15,7 +15,9 @@ class ConversationStore:
         content: str,
         curriculum_book_name: str,
         summary: Optional[str] = None,
-        title: Optional[str] = None
+        title: Optional[str] = None,
+        question_id: Optional[int] = None,
+        question_subtopics_id: Optional[int] = None,
     ) -> Tuple[dict, bool]:
         """
         Creates a new message. If conversation_id is None or doesn't exist for user,
@@ -65,14 +67,47 @@ class ConversationStore:
 
                     cur.execute(
                         """
-                        INSERT INTO conversations (id, username, curriculum_book_name, title)
-                        VALUES (%s, %s, %s, %s)
-                        RETURNING id, username, curriculum_book_name, title, created_at, updated_at
+                        INSERT INTO conversations (
+                            id,
+                            username,
+                            curriculum_book_name,
+                            title,
+                            question_id,
+                            question_subtopics_id
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        RETURNING
+                            id,
+                            username,
+                            curriculum_book_name,
+                            title,
+                            question_id,
+                            question_subtopics_id,
+                            created_at,
+                            updated_at
                         """,
-                        (str(conversation_id), username, curriculum_book_name, title)
+                        (
+                            str(conversation_id),
+                            username,
+                            curriculum_book_name,
+                            title,
+                            question_id,
+                            question_subtopics_id,
+                        )
                     )
                     new_convo = cur.fetchone()
                     is_new_conversation = True
+                elif question_id is not None or question_subtopics_id is not None:
+                    cur.execute(
+                        """
+                        UPDATE conversations
+                        SET
+                            question_id = COALESCE(conversations.question_id, %s),
+                            question_subtopics_id = COALESCE(conversations.question_subtopics_id, %s)
+                        WHERE id = %s AND username = %s
+                        """,
+                        (question_id, question_subtopics_id, str(conversation_id), username),
+                    )
 
                 cur.execute(
                     """
@@ -94,7 +129,15 @@ class ConversationStore:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     """
-                    SELECT id, username, curriculum_book_name, title, created_at, updated_at
+                    SELECT
+                        id,
+                        username,
+                        curriculum_book_name,
+                        title,
+                        question_id,
+                        question_subtopics_id,
+                        created_at,
+                        updated_at
                     FROM conversations
                     WHERE username = %s
                     ORDER BY updated_at DESC
@@ -111,11 +154,71 @@ class ConversationStore:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     """
-                    SELECT id, username, curriculum_book_name, title, created_at, updated_at
+                    SELECT
+                        id,
+                        username,
+                        curriculum_book_name,
+                        title,
+                        question_id,
+                        question_subtopics_id,
+                        created_at,
+                        updated_at
                     FROM conversations
                     WHERE id = %s AND username = %s
                     """,
                     (str(conversation_id), username)
+                )
+                conversation = cur.fetchone()
+                return dict(conversation) if conversation else None
+
+    def get_conversation_by_question(self, username: str, question_id: int) -> Optional[dict]:
+        with db_session.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        id,
+                        username,
+                        curriculum_book_name,
+                        title,
+                        question_id,
+                        question_subtopics_id,
+                        created_at,
+                        updated_at
+                    FROM conversations
+                    WHERE username = %s AND question_id = %s
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                    """,
+                    (username, question_id),
+                )
+                conversation = cur.fetchone()
+                return dict(conversation) if conversation else None
+
+    def get_conversation_by_question_subtopic(
+        self,
+        username: str,
+        question_subtopics_id: int,
+    ) -> Optional[dict]:
+        with db_session.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        id,
+                        username,
+                        curriculum_book_name,
+                        title,
+                        question_id,
+                        question_subtopics_id,
+                        created_at,
+                        updated_at
+                    FROM conversations
+                    WHERE username = %s AND question_subtopics_id = %s
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                    """,
+                    (username, question_subtopics_id),
                 )
                 conversation = cur.fetchone()
                 return dict(conversation) if conversation else None

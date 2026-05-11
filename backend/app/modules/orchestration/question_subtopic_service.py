@@ -168,6 +168,8 @@ class QuestionSubtopicService:
                 content=prompt,
                 curriculum_book_name=curriculum_book_name,
                 title=subtopic_name,
+                question_id=question_id,
+                question_subtopics_id=question_subtopics_id,
             )
             logger.info(
                 "request_subtopic: saved user message conversation_id=%s question_subtopics_id=%s",
@@ -186,6 +188,8 @@ class QuestionSubtopicService:
                 content=prompt,
                 curriculum_book_name=curriculum_book_name,
                 title=subtopic_name,
+                question_id=question_id,
+                question_subtopics_id=question_subtopics_id,
             )
             conversation_id = UUID(str(user_msg["conversation_id"]))
             logger.info(
@@ -257,6 +261,8 @@ class QuestionSubtopicService:
             curriculum_book_name=curriculum_book_name,
             summary=result.get("summary"),
             title=subtopic_name,
+            question_id=question_id,
+            question_subtopics_id=question_subtopics_id,
         )
         logger.info(
             "request_subtopic: completed question_subtopics_id=%s conversation_id=%s",
