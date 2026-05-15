@@ -132,8 +132,9 @@ function App() {
                 <option value="GOV_SSC_PHYSICS">GOV_SSC_PHYSICS</option>
                 <option value="GOV_SSC_CHEMISTRY">GOV_SSC_CHEMISTRY</option>
                 <option value="GOV_SSC_ENGLISH">GOV_SSC_ENGLISH</option>
+                <option value="GOV_SSC_MATHEMATICS">GOV_SSC_MATHEMATICS</option>
                 {Array.isArray(documents) && documents.map((doc, idx) => (
-                  doc?.curriculum_book_name && !["GOV_SSC_PHYSICS", "GOV_SSC_CHEMISTRY", "GOV_SSC_ENGLISH"].includes(doc.curriculum_book_name) && (
+                  doc?.curriculum_book_name && !["GOV_SSC_PHYSICS", "GOV_SSC_CHEMISTRY", "GOV_SSC_ENGLISH","GOV_SSC_MATHEMATICS"].includes(doc.curriculum_book_name) && (
                     <option key={idx} value={doc.curriculum_book_name}>{doc.curriculum_book_name}</option>
                   )
                 ))}

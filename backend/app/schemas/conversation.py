@@ -9,6 +9,7 @@ class CurriculumBookEnum(str, Enum):
     GOV_SSC_ENGLISH = "GOV_SSC_ENGLISH"
     GOV_SSC_PHYSICS = "GOV_SSC_PHYSICS"
     GOV_SSC_CHEMISTRY = "GOV_SSC_CHEMISTRY"
+    GOV_SSC_MATHEMATICS = "GOV_SSC_MATHEMATICS"
 
 class MessageRole(str, Enum):
     USER = "user"
