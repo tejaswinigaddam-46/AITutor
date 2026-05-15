@@ -1,4 +1,5 @@
 from typing import List, Optional
+from uuid import UUID
 from app.modules.persistence.question_store import question_store
 from app.modules.orchestration.question_subtopic_service import question_subtopic_service
 
@@ -64,6 +65,72 @@ class QuestionService:
             student_username=student_username,
             curriculum_book_name=curriculum_book_name
         )
+
+    def get_questions_numeric_progress(
+        self,
+        exam_id: UUID,
+        student_username: str,
+        question_names: List[str],
+    ) -> List[dict]:
+        if not student_username or not student_username.strip():
+            raise ValueError("Student username cannot be empty")
+        if not question_names:
+            return []
+
+        exam_id_str = str(exam_id)
+        results: List[dict] = []
+
+        for raw_name in question_names:
+            question_name = (raw_name or "").strip()
+            if not question_name:
+                results.append(
+                    {
+                        "question_name": raw_name,
+                        "question_id": None,
+                        "total_subtopics": 0,
+                        "completed_subtopics": 0,
+                        "progress_ratio": 0.0,
+                    }
+                )
+                continue
+
+            assignment = question_store.get_question_assignment_by_exam_student_name(
+                exam_id=exam_id_str,
+                student_username=student_username,
+                question_name=question_name,
+            )
+            if not assignment:
+                results.append(
+                    {
+                        "question_name": question_name,
+                        "question_id": None,
+                        "total_subtopics": 0,
+                        "completed_subtopics": 0,
+                        "progress_ratio": 0.0,
+                    }
+                )
+                continue
+
+            question_id = int(assignment["question_id"])
+            counts = question_store.get_question_subtopics_progress_counts(
+                question_id=question_id,
+                student_username=student_username,
+            )
+            total_subtopics = int(counts.get("total_subtopics") or 0)
+            completed_subtopics = int(counts.get("completed_subtopics") or 0)
+            progress_ratio = (completed_subtopics / total_subtopics) if total_subtopics > 0 else 0.0
+
+            results.append(
+                {
+                    "question_name": question_name,
+                    "question_id": question_id,
+                    "total_subtopics": total_subtopics,
+                    "completed_subtopics": completed_subtopics,
+                    "progress_ratio": float(progress_ratio),
+                }
+            )
+
+        return results
 
     def get_question_assignment_with_subtopics(self, question_id: int) -> Optional[dict]:
         assignment = question_store.get_question_assignment(question_id)

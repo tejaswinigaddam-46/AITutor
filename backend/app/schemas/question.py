@@ -106,3 +106,23 @@ class QuestionProgressSummary(BaseModel):
     question_id: int
     question_name: str
     status: QuestionOverallStatus
+
+
+class QuestionsNumericProgressRequest(BaseModel):
+    exam_id: UUID
+    student_username: str
+    question_names: List[str] = Field(default_factory=list)
+
+
+class QuestionNumericProgressItem(BaseModel):
+    question_name: str
+    question_id: Optional[int] = None
+    total_subtopics: int
+    completed_subtopics: int
+    progress_ratio: float
+
+
+class QuestionsNumericProgressResponse(BaseModel):
+    exam_id: UUID
+    student_username: str
+    results: List[QuestionNumericProgressItem]

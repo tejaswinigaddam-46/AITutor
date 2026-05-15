@@ -12,7 +12,9 @@ from app.schemas.question import (
     QuestionSubtopicRequestAnswer,
     QuestionProgressRead,
     QuestionProgressUpdate,
-    QuestionProgressSummary
+    QuestionProgressSummary,
+    QuestionsNumericProgressRequest,
+    QuestionsNumericProgressResponse,
 )
 from app.modules.orchestration.question_service import question_service
 from app.modules.orchestration.question_subtopic_service import question_subtopic_service
@@ -111,6 +113,30 @@ async def get_questions_progress(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error getting questions progress: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/assignments/progress/numeric", response_model=QuestionsNumericProgressResponse)
+async def get_questions_numeric_progress(
+    request: QuestionsNumericProgressRequest,
+    username: str = Depends(get_current_username),
+):
+    try:
+        results = question_service.get_questions_numeric_progress(
+            exam_id=request.exam_id,
+            student_username=request.student_username,
+            question_names=request.question_names,
+        )
+        return {
+            "exam_id": request.exam_id,
+            "student_username": request.student_username,
+            "results": results,
+        }
+    except ValueError as e:
+        logger.warning(f"Error getting questions numeric progress: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error getting questions numeric progress: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -72,6 +72,54 @@ class QuestionStore:
                 question = cur.fetchone()
                 return dict(question) if question else None
 
+    def get_question_assignment_by_exam_student_name(
+        self,
+        exam_id: str,
+        student_username: str,
+        question_name: str,
+    ) -> Optional[dict]:
+        with db_session.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT question_id, question_name, curriculum_book_name,
+                           student_username, assigned_by_username, assigned_at, exam_id
+                    FROM question_assignments
+                    WHERE exam_id = %s AND student_username = %s AND question_name = %s
+                    ORDER BY assigned_at DESC
+                    LIMIT 1
+                    """,
+                    (exam_id, student_username, question_name),
+                )
+                row = cur.fetchone()
+                return dict(row) if row else None
+
+    def get_question_subtopics_progress_counts(
+        self,
+        question_id: int,
+        student_username: str,
+    ) -> dict:
+        with db_session.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        COUNT(qs.question_subtopics_id) AS total_subtopics,
+                        COALESCE(SUM(CASE WHEN qp.status = 'completed' THEN 1 ELSE 0 END), 0) AS completed_subtopics
+                    FROM question_subtopics qs
+                    LEFT JOIN question_progress qp
+                        ON qp.question_subtopics_id = qs.question_subtopics_id
+                        AND qp.student_username = %s
+                    WHERE qs.question_id = %s
+                    """,
+                    (student_username, question_id),
+                )
+                row = cur.fetchone() or {}
+                return {
+                    "total_subtopics": int(row.get("total_subtopics") or 0),
+                    "completed_subtopics": int(row.get("completed_subtopics") or 0),
+                }
+
     def get_question_assignments_by_exam_id(
         self,
         exam_id: str,
